@@ -128,16 +128,57 @@ the sweep-loop smoke test:
 
 Confirms the sweep loop completes with no errors before the long run.
 
-### Step 3 — full sweep
+### Step 3 — full sweep — one invocation per scenario group
+
+**Run each scenario group as its own sweep** — three separate invocations
+(`recall`, `capture`, `searchable`), all on the same N grid. Do NOT combine
+them into one `--sweep-scenarios` list.
+
+Why separate (decided 2026-05-22, after the Step 2 smoke):
+
+  * **`remaining_insertable_vectors` ceiling.** `capture` / `searchable`
+    insert rows while measuring. pyenvector's `Index.insert`
+    (`index/index.py:1152`) refuses an insert once the index's
+    `remaining_insertable_vectors` reaches 0 — `ValueError: Index is not
+    insertable for 1 vectors, 0 available`. In the Step 2 smoke this fired at
+    N=10000 after ~33 cumulative inserts. Running the mutating groups together
+    makes them share that headroom and starves the later ones; one group per
+    sweep gives each the full per-N headroom.
+  * **Within-N drift.** A combined sweep primes once per N then runs the
+    groups in sequence, so later groups measure a grown index. Separate sweeps
+    remove cross-group drift — each group sees exactly the primed N plus only
+    its own measured inserts.
+
+Two scenario groups are excluded outright:
+
+  * `multi_capture` — see `latency_bench_plan_envector_v1.4.3.md` (the v1.4.3
+    cluster crashes on its batch-insert path).
+  * `duplicate` — near-redundant with `capture`: both repeatedly capture the
+    same text, and `capture`'s warmup runs already seed copies, so `capture`'s
+    measured runs already exercise the near-duplicate `score` path. `duplicate`
+    also drifts (each run inserts another copy of the text), so its repeats are
+    not a clean fixed-condition sample. Dropped 2026-05-22.
+
+All three use the identical grid and run settings (`--runs 15 --warmup 3`,
+i.e. 12 effective runs/N — same for every group):
 
 ```
-.venv/bin/python benchmark/runners/latency_bench.py \
-    --direct-envector \
-    --primer-rows 100,1000,10000,20000,25000,32000,50000,100000 \
-    --runs 15 --warmup 3 \
-    --report benchmark/reports/latency_sweep_v143_mm32ivf_<date>.md \
-    --raw-csv benchmark/reports/raw/latency_sweep_v143_mm32ivf_<date>.csv
+GRID=100,1000,10000,20000,25000,32000,50000,100000
+for grp in recall capture searchable; do
+  .venv/bin/python benchmark/runners/latency_bench.py --direct-envector \
+      --primer-rows $GRID --sweep-scenarios $grp --runs 15 --warmup 3 \
+      --report  benchmark/reports/latency_sweep_v143_mm32ivf_${grp}_<date>.md \
+      --raw-csv benchmark/reports/raw/latency_sweep_v143_mm32ivf_${grp}_<date>.csv
+done
 ```
+
+Strictly sequential — all three hit the same cluster, never concurrently.
+`recall` is the primary deliverable (the `score`-vs-N crossover curve) and the
+only group with no measured inserts, so it alone yields clean data across the
+whole grid. `capture` / `searchable` insert 15 rows/scenario at `--runs 15`
+(45 inserts/N for the 3-scenario `capture` group), so they ERROR with
+`0 available` at the higher N (≥ ~10k); those ERROR rows are recorded and mark
+where the ceiling sits.
 
 Grid = realistic org-memory corpus sizes, dense around the crossover.
 Centroids ≈ ⌈N/4096⌉; with nprobe=6 the crossover (~24,576) is bracketed by
@@ -154,9 +195,10 @@ N=20,000 and N=25,000:
 | 50,000 | 13 | 6 / 13 | ivf pruning active |
 | 100,000 | 25 | 6 / 25 | ivf pruning active |
 
-12 effective runs/N. Priming inserts N records one-by-one, so N=100,000 has a
-long priming phase (~10⁵ sequential insert RPCs) before measurement — expect
-the full run to be multi-hour.
+12 effective runs/N. Priming inserts N records in batches of 4096
+(`PRIMER_BATCH_ROWS`, `await_completion=True, load=True`), so N=100,000 is
+~25 sequential batches and each sweep's priming phase alone is ~2–3 h — with
+four separate sweeps, expect a long, ideally overnight, run.
 
 > **Caveat** — verify the ivf centroid merge has completed after priming each
 > N, before measuring. `_prime_bench_index` waits only for `score` readiness,

@@ -56,35 +56,15 @@ Total end-to-end
 
 - Vault gRPC 연결 latency (원격 서버 RTT 포함)
 
-### Feature 4: `multi_capture` (다중 phase 동시 embed+insert)
+### Feature 4: `multi_capture` — 제외됨
 
-> **[제외 — 2026-05-22]** v1.4.3 클러스터(`runebench-0520-2-scfomauvy6cn`)에서
-> `multi_capture`(T13/T14)는 측정 시나리오에서 **제외**한다. multi_capture의 insert는
-> batch insert(`use_row_insert=False`) 경로인데, 이 클러스터는 batch insert RPC가
-> 누적되면 `async split batch data failed: UNAVAILABLE`로 다운된다
-> (`benchmark/repro/BUG_REPORT.md`). 2026-05-22 검증에서 T13(2-phase)는 통과했으나
-> 풀런 시 크래시 임계점이 insert #3~#4로 떠돌아 T14까지 완주가 불가능했고,
-> `await_completion=True, load=True`(BUG_REPORT의 "안전 패턴")로도 재현됐다.
-> 클러스터 결함이 수정될 때까지 T13/T14는 측정하지 않는다.
-> 검증 로그: `benchmark/reports/raw/multi_capture_awaitload_verify*`.
-> 아래 파이프라인·시나리오 정의는 결함 수정 후 재개를 위해 보존한다.
-
-```
-[1] texts → embed(texts): N개 벡터 배치 임베딩 (embed_single × N 아님)
-[2] Novelty Check → envector score (primary record = texts[0])
-[3] Vault TopK Decrypt (gRPC)
-[4] FHE Encrypt → index.insert(vectors=vecs, use_row_insert=False): N개 배치 삽입
-────
-Total end-to-end
-```
-
-> **[목적]** 실제 capture에서 multi-phase decision 처리 경로를 재현.
-> server.py의 `record_builder.build_phases()` → `insert_with_text(texts=[...])` 경로.
-> single capture(`embed_single` × 1)와 비교해 배치 embed/insert 오버헤드 측정.
-
-> **[시나리오]**
-> T13 = 2-phase (DB + 캐시 레이어 두 단계 결정)
-> T14 = 5-phase (마이크로서비스 전환 ADR 수준 복잡 결정)
+> **[제외 — 2026-05-22]** `multi_capture`는 측정 시나리오에서 **제거**됐다.
+> **사유**: multi_capture의 insert는 batch insert(`use_row_insert=False`) 경로인데,
+> v1.4.3 클러스터는 batch insert RPC 누적 시 `async split batch data failed:
+> UNAVAILABLE`로 다운된다(`benchmark/repro/BUG_REPORT.md`). 2026-05-22 검증에서
+> 풀런 완주가 불가능했고 `await_completion=True, load=True`(BUG_REPORT의 "안전
+> 패턴")로도 재현됐다. 검증 로그: `benchmark/reports/raw/multi_capture_awaitload_verify*`.
+> 파이프라인·시나리오(T13/T14) 정의는 git 이력에서 확인 — 클러스터 결함 수정 후 재개 검토.
 
 ### Feature 5: `searchable` (insert → MERGED_SAVED 대기)
 
@@ -117,7 +97,6 @@ Total end-to-end (MERGED_SAVED 시점까지)
 | T1 | capture | 지정값 | 짧은 영어 (~30 tokens) |
 | T2 | capture | 지정값 | 긴 영어 (~150 tokens) |
 | T3 | capture | 지정값 | 한국어 |
-| T4 | capture | 지정값 | 중복 입력 (novelty near-dup) |
 | T5 | recall  | — | exact match query |
 | T6 | recall  | — | cross-lang KO→EN |
 | T7 | recall  | — | topk scaling (1, 3, 5, 10) |
@@ -125,8 +104,13 @@ Total end-to-end (MERGED_SAVED 시점까지)
 | T10 | searchable | — | 짧은 영어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
 | T11 | searchable | — | 긴 영어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
 | T12 | searchable | — | 한국어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
-| ~~T13~~ | ~~multi_capture~~ | — | **제외 (2026-05-22)** — 2-phase. 클러스터 batch-insert 크래시, Feature 4 callout 참고 |
-| ~~T14~~ | ~~multi_capture~~ | — | **제외 (2026-05-22)** — 5-phase. 클러스터 batch-insert 크래시, Feature 4 callout 참고 |
+
+> **[제외된 시나리오]** 아래는 측정 대상에서 제거됐다 (정의는 git 이력 참고):
+> - **T13·T14 (`multi_capture`)** — v1.4.3 클러스터가 batch insert 누적 시 크래시. Feature 4 참고. (제거 2026-05-22)
+> - **T4 (`duplicate`, 중복 입력)** — `capture`(T1)와 사실상 중복 측정. capture는 같은 텍스트를
+>   반복 capture하고 warmup run이 이미 사본을 인덱스에 심으므로, capture의 측정 run들이 이미
+>   near-duplicate `score` 경로를 밟는다. 게다가 T4는 run마다 사본이 누적돼(drift) 고정 조건의
+>   깨끗한 반복 샘플이 못 된다. (제거 2026-05-22)
 
 ---
 
@@ -191,4 +175,3 @@ Total end-to-end (MERGED_SAVED 시점까지)
 2. **재현성**: 같은 시나리오 재실행 시 p50 변동 < 20%
 3. **batch 효율**: T1 insert_ms(batch) < N × T1 insert_ms(single) (배치 효율 확인)
 4. **IVF_VCT score latency**: v1.2.2 flat score와 비교 → nprobe 오버헤드 반영 여부 확인
-5. **중복 감지 동작**: T4에서 score phase가 T1 대비 증가하는지 확인
