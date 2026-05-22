@@ -121,6 +121,8 @@ class V143Adapter(SdkAdapter):
         metadata: list,
         *,
         row_insert: bool = False,
+        await_completion: bool = False,
+        load: bool = False,
     ) -> None:
         """Insert vectors with metadata. v1.4.x honours `row_insert`.
 
@@ -131,12 +133,18 @@ class V143Adapter(SdkAdapter):
         `use_row_insert`, so pass `row_insert` through. Raise RuntimeError if
         the result dict reports not-ok.
 
-        `await_completion=False, load=False` are passed explicitly: per the
-        `measure_insert_to_searchable` docstring, this is the ONLY working
-        insert combination on the 1.4.3 SDK today (the `await_completion=True`
-        path is bug-pending and the SDK default `load=True` triggers a server
-        `ForwardLoadRawShard` RPC that the v1.4.3 cluster build does not
-        implement — see benchmark/reports/raw/create_probe_n256_rowinsert_*).
+        `await_completion` / `load` default to False — the fire-and-forget
+        submission used by the single-capture measurement, where `insert`
+        latency must cover only the RPC and not the server-side merge. A
+        caller may pass True/True to also wait for the cluster's async merge
+        to retire and load the index (`_multi_capture_phases` does this so its
+        `insert_batch` phase reflects a durable insert). True/True is the same
+        safe combination `prime_insert` relies on: because `await_completion`
+        blocks until merge completes, the in-SDK `load` lands AFTER merge and
+        so does not trip the pre-merge `ForwardLoadRawShard` path the v1.4.3
+        cluster build does not implement (see `measure_insert_to_searchable`).
+        Only safe for calls of <= ENCRYPTION_BATCH_SIZE (4096) rows — beyond
+        that the SDK fans out multiple wait-free RPCs (see BUG_REPORT.md).
         """
         # JSON-serialise metadata dicts (as V122Adapter.insert does), then
         # call through EnVectorSDKAdapter — v1.4.x call_insert honours
@@ -149,8 +157,8 @@ class V143Adapter(SdkAdapter):
             vectors=vectors,
             metadata=meta_strs,
             use_row_insert=row_insert,
-            await_completion=False,
-            load=False,
+            await_completion=await_completion,
+            load=load,
         )
         if isinstance(res, dict) and not res.get("ok", True):
             raise RuntimeError(f"insert failed: {res.get('error')}")

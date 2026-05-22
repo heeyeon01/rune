@@ -82,9 +82,12 @@ class V122Adapter(SdkAdapter):
         metadata: list,
         *,
         row_insert: bool = False,
+        await_completion: bool = False,
+        load: bool = False,
     ) -> None:
-        # row_insert is a 1.4.x-only knob (single-row insert API). v1.2.2 has
-        # no such path, so it is accepted for interface parity and ignored.
+        # row_insert / await_completion / load are 1.4.x-only knobs (single-row
+        # insert API; async-merge wait + index load). v1.2.2 has no such paths,
+        # so they are accepted for interface parity and ignored.
         meta_strs = [
             json.dumps(m) if isinstance(m, dict) else str(m) for m in metadata
         ]

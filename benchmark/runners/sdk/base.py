@@ -226,12 +226,21 @@ class SdkAdapter(ABC):
         metadata: list,
         *,
         row_insert: bool = False,
+        await_completion: bool = False,
+        load: bool = False,
     ) -> None:
         """Insert vectors with their metadata dicts.
 
         The second version-divergent call site: 1.4.x exposes a single-row
         insert path (`use_row_insert`) that 1.2.2 does not. `row_insert` is
         honoured on 1.4.x and ignored on 1.2.2.
+
+        `await_completion` / `load` are 1.4.x-only knobs. Both default to
+        False (fire-and-forget submission — `insert` latency covers only the
+        RPC). Passing True/True additionally waits for the cluster's async
+        merge to retire and loads the index, so the call returns only once
+        the insert is durable. Honoured on 1.4.x, accepted-and-ignored on
+        1.2.2 (whose batch insert is non-blocking with no lifecycle states).
         """
 
     # ── priming (version-agnostic; v143 overrides) ────────────────────────

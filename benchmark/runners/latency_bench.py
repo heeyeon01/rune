@@ -1150,7 +1150,9 @@ class LatencyBenchmark:
           embed_batch  — embed(texts): single gRPC call, N vectors at once
           score        — novelty check on primary record (texts[0])
           vault_topk   — Vault decrypt on primary record's score
-          insert_batch — insert all N vectors in one batch API call
+          insert_batch — insert all N vectors in one batch API call with
+                         await_completion=True + load=True (durable insert:
+                         RPC submit + server merge wait + index load)
           total        — wall clock including all phases
         """
         total_start = time.perf_counter()
@@ -1175,7 +1177,11 @@ class LatencyBenchmark:
             vault_ms = t_vault.elapsed_ms
 
         # [4] Insert all N vectors in one call — multi-phase capture is always
-        # a batch insert (row_insert=False).
+        # a batch insert (row_insert=False). await_completion=True, load=True:
+        # the insert_batch phase waits for the cluster's async merge to retire
+        # and loads the index, so it measures a durable insert rather than
+        # bare RPC submission. Safe here — N is 2-5 rows, far under the 4096
+        # row threshold of BUG_REPORT.md, and runs are sequential.
         metadata = [
             self._build_insert_metadata(t, f"phase-{i + 1}", domain)
             for i, t in enumerate(texts)
@@ -1186,6 +1192,8 @@ class LatencyBenchmark:
                 vecs,
                 metadata,
                 row_insert=False,
+                await_completion=True,
+                load=True,
             )
         insert_ms = t_insert.elapsed_ms
 
