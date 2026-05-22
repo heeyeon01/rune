@@ -58,6 +58,17 @@ Total end-to-end
 
 ### Feature 4: `multi_capture` (다중 phase 동시 embed+insert)
 
+> **[제외 — 2026-05-22]** v1.4.3 클러스터(`runebench-0520-2-scfomauvy6cn`)에서
+> `multi_capture`(T13/T14)는 측정 시나리오에서 **제외**한다. multi_capture의 insert는
+> batch insert(`use_row_insert=False`) 경로인데, 이 클러스터는 batch insert RPC가
+> 누적되면 `async split batch data failed: UNAVAILABLE`로 다운된다
+> (`benchmark/repro/BUG_REPORT.md`). 2026-05-22 검증에서 T13(2-phase)는 통과했으나
+> 풀런 시 크래시 임계점이 insert #3~#4로 떠돌아 T14까지 완주가 불가능했고,
+> `await_completion=True, load=True`(BUG_REPORT의 "안전 패턴")로도 재현됐다.
+> 클러스터 결함이 수정될 때까지 T13/T14는 측정하지 않는다.
+> 검증 로그: `benchmark/reports/raw/multi_capture_awaitload_verify*`.
+> 아래 파이프라인·시나리오 정의는 결함 수정 후 재개를 위해 보존한다.
+
 ```
 [1] texts → embed(texts): N개 벡터 배치 임베딩 (embed_single × N 아님)
 [2] Novelty Check → envector score (primary record = texts[0])
@@ -114,8 +125,8 @@ Total end-to-end (MERGED_SAVED 시점까지)
 | T10 | searchable | — | 짧은 영어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
 | T11 | searchable | — | 긴 영어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
 | T12 | searchable | — | 한국어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
-| T13 | multi_capture | — | 2-phase: embed(2texts) + insert 2 vectors batch |
-| T14 | multi_capture | — | 5-phase: embed(5texts) + insert 5 vectors batch |
+| ~~T13~~ | ~~multi_capture~~ | — | **제외 (2026-05-22)** — 2-phase. 클러스터 batch-insert 크래시, Feature 4 callout 참고 |
+| ~~T14~~ | ~~multi_capture~~ | — | **제외 (2026-05-22)** — 5-phase. 클러스터 batch-insert 크래시, Feature 4 callout 참고 |
 
 ---
 
@@ -148,6 +159,11 @@ Total end-to-end (MERGED_SAVED 시점까지)
 ---
 
 ## 실행 방법
+
+> **[multi_capture 제외]** `multi_capture`(T13/T14)는 Feature 4 사유로 측정하지
+> 않는다. runner에 feature 제외 플래그가 없으므로 `--feature multi_capture`는
+> 돌리지 않는다. `--feature` 생략 전체 실행 시 multi_capture가 맨 마지막에 돌며
+> T13/T14가 FAIL로 남는데(앞서 측정된 다른 feature 수치는 유효), 그 FAIL은 무시한다.
 
 ```bash
 # 사전 확인: vault 연결만 테스트
