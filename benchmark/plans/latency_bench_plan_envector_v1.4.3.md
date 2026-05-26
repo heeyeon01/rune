@@ -56,24 +56,15 @@ Total end-to-end
 
 - Vault gRPC 연결 latency (원격 서버 RTT 포함)
 
-### Feature 4: `multi_capture` (다중 phase 동시 embed+insert)
+### Feature 4: `multi_capture` — 제외됨
 
-```
-[1] texts → embed(texts): N개 벡터 배치 임베딩 (embed_single × N 아님)
-[2] Novelty Check → envector score (primary record = texts[0])
-[3] Vault TopK Decrypt (gRPC)
-[4] FHE Encrypt → index.insert(vectors=vecs, use_row_insert=False): N개 배치 삽입
-────
-Total end-to-end
-```
-
-> **[목적]** 실제 capture에서 multi-phase decision 처리 경로를 재현.
-> server.py의 `record_builder.build_phases()` → `insert_with_text(texts=[...])` 경로.
-> single capture(`embed_single` × 1)와 비교해 배치 embed/insert 오버헤드 측정.
-
-> **[시나리오]**
-> T13 = 2-phase (DB + 캐시 레이어 두 단계 결정)
-> T14 = 5-phase (마이크로서비스 전환 ADR 수준 복잡 결정)
+> **[제외 — 2026-05-22]** `multi_capture`는 측정 시나리오에서 **제거**됐다.
+> **사유**: multi_capture의 insert는 batch insert(`use_row_insert=False`) 경로인데,
+> v1.4.3 클러스터는 batch insert RPC 누적 시 `async split batch data failed:
+> UNAVAILABLE`로 다운된다(`benchmark/repro/BUG_REPORT.md`). 2026-05-22 검증에서
+> 풀런 완주가 불가능했고 `await_completion=True, load=True`(BUG_REPORT의 "안전
+> 패턴")로도 재현됐다. 검증 로그: `benchmark/reports/raw/multi_capture_awaitload_verify*`.
+> 파이프라인·시나리오(T13/T14) 정의는 git 이력에서 확인 — 클러스터 결함 수정 후 재개 검토.
 
 ### Feature 5: `searchable` (insert → MERGED_SAVED 대기)
 
@@ -106,7 +97,6 @@ Total end-to-end (MERGED_SAVED 시점까지)
 | T1 | capture | 지정값 | 짧은 영어 (~30 tokens) |
 | T2 | capture | 지정값 | 긴 영어 (~150 tokens) |
 | T3 | capture | 지정값 | 한국어 |
-| T4 | capture | 지정값 | 중복 입력 (novelty near-dup) |
 | T5 | recall  | — | exact match query |
 | T6 | recall  | — | cross-lang KO→EN |
 | T7 | recall  | — | topk scaling (1, 3, 5, 10) |
@@ -114,8 +104,13 @@ Total end-to-end (MERGED_SAVED 시점까지)
 | T10 | searchable | — | 짧은 영어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
 | T11 | searchable | — | 긴 영어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
 | T12 | searchable | — | 한국어 → insert(await_searchable=True), MERGED_SAVED 대기 포함 |
-| T13 | multi_capture | — | 2-phase: embed(2texts) + insert 2 vectors batch |
-| T14 | multi_capture | — | 5-phase: embed(5texts) + insert 5 vectors batch |
+
+> **[제외된 시나리오]** 아래는 측정 대상에서 제거됐다 (정의는 git 이력 참고):
+> - **T13·T14 (`multi_capture`)** — v1.4.3 클러스터가 batch insert 누적 시 크래시. Feature 4 참고. (제거 2026-05-22)
+> - **T4 (`duplicate`, 중복 입력)** — `capture`(T1)와 사실상 중복 측정. capture는 같은 텍스트를
+>   반복 capture하고 warmup run이 이미 사본을 인덱스에 심으므로, capture의 측정 run들이 이미
+>   near-duplicate `score` 경로를 밟는다. 게다가 T4는 run마다 사본이 누적돼(drift) 고정 조건의
+>   깨끗한 반복 샘플이 못 된다. (제거 2026-05-22)
 
 ---
 
@@ -125,6 +120,31 @@ Total end-to-end (MERGED_SAVED 시점까지)
 - **보고 지표**: p50, p95, p99, mean (ms 단위)
 - **타이머**: `time.perf_counter()`
 - **단계별 측정**: embed / score / vault_topk / insert(또는 remind) / total 개별 계측
+- **시나리오 격리**: 모든 시나리오는 같은 시작 조건(정확히 N개 primed records,
+  fresh index, 선행 시나리오의 잔류 상태 없음)에서 측정한다.
+  - **사유**: 격리된 환경에서 측정해야 신뢰할 수 있는 latency 데이터가 나온다.
+    선행 시나리오가 인덱스 상태(row 수, raw/merged shard 비율, 클러스터 캐시,
+    배경 merge worker 상태 등)를 흔든 채로 다음 시나리오를 측정하면 그 수치가
+    "N 사이즈의 인덱스에서 X 시나리오의 latency"인지 "T1을 N+δ회 돌린 다음
+    T2 latency"인지 구분이 안 된다.
+  - **정책 — mutating vs read-only**:
+    - **mutating 시나리오** (capture T1/T2/T3, searchable T10/T11/T12): 측정 중
+      insert가 일어나 인덱스 상태를 바꾸므로 시나리오마다 drop+create+prime 다시.
+      공유 인덱스에서는 (a) 후행 시나리오 수치가 선행 시나리오의 누적 insert를
+      반영해 측정값이 오염되고, (b) row-insert 슬롯 소진으로 후행이 실패하는
+      사례까지 관찰됨 (2026-05-25 capture sweep, 메커니즘
+      `benchmark/reports/insertable_probe_v143_2026-05-26.md`).
+    - **read-only 시나리오** (recall T5/T6 — sweep mode / single-grid 공통,
+      그리고 single-grid 전용 T7 topk 변형): 측정이 인덱스 상태를 바꾸지 않으므로
+      동일 N의 primed 인덱스를 공유. 시나리오마다 재-prime하면 같은 데이터를
+      다시 까는 셈이며, 특히 N=100000에서는 priming 한 번이 ~16분이라 시간 손실이 큼.
+      시나리오별 warmup run이 클러스터 캐시 워밍 차이는 흡수.
+  - **구현**:
+    - sweep mode: mutating은 `{bench_index}_N{N}_{sid}` per-scenario 유니크 인덱스,
+      read-only(recall T5/T6)는 `{bench_index}_N{N}_recall` 그룹 공유 인덱스.
+      T7은 sweep 측정 대상이 아님(N과 무관).
+    - single-grid mode: mutating 시나리오는 각각 reset+prime,
+      recall 블록(T5/T6/T7 topk 4종)은 한 번 reset+prime 후 공유.
 
 ---
 
@@ -148,6 +168,11 @@ Total end-to-end (MERGED_SAVED 시점까지)
 ---
 
 ## 실행 방법
+
+> **[multi_capture 제외]** `multi_capture`(T13/T14)는 Feature 4 사유로 측정하지
+> 않는다. runner에 feature 제외 플래그가 없으므로 `--feature multi_capture`는
+> 돌리지 않는다. `--feature` 생략 전체 실행 시 multi_capture가 맨 마지막에 돌며
+> T13/T14가 FAIL로 남는데(앞서 측정된 다른 feature 수치는 유효), 그 FAIL은 무시한다.
 
 ```bash
 # 사전 확인: vault 연결만 테스트
@@ -175,4 +200,3 @@ Total end-to-end (MERGED_SAVED 시점까지)
 2. **재현성**: 같은 시나리오 재실행 시 p50 변동 < 20%
 3. **batch 효율**: T1 insert_ms(batch) < N × T1 insert_ms(single) (배치 효율 확인)
 4. **IVF_VCT score latency**: v1.2.2 flat score와 비교 → nprobe 오버헤드 반영 여부 확인
-5. **중복 감지 동작**: T4에서 score phase가 T1 대비 증가하는지 확인

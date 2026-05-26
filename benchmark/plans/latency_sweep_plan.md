@@ -48,23 +48,25 @@ selected scenarios across a grid of index sizes N; see the runner's
 `run_sweep` docstring. Raw samples stream to a long-format CSV
 (`N,scenario,run_idx,phase,latency_ms`).
 
-## Methodology — shared grid
+## Methodology — asymmetric grid
 
 | | v1.2.2 / flat | v1.4.3 / ivf_vct |
 |---|---|---|
 | Scaling | O(N), no regime change | ≈ flat scan below the crossover, then ≈ constant |
-| Grid strategy | measure the full grid (no extrapolation) | measure the full grid, dense around the crossover |
+| High-N measurement | infeasible — score ≈ 11 ms/record, so N=16384 ≈ 3 min/call | feasible — ivf cost caps at ≈ nprobe × 4096 |
+| Grid strategy | measure [0..8192], **extrapolate the line above** | measure realistic sizes, dense around the crossover |
 
-flat is provably linear — a brute scan. ivf changes regime at the crossover
-(~24,576), so it must be measured with points bracketing it. Both versions
-sweep the **same grid** so the comparison can overlay them at identical N
-points without trusting any extrapolation. The grid is dense around the
-crossover (20,000 / 25,000 / 32,000) where the ivf advantage emerges; the
-high-N tail (50k, 100k) confirms the ivf-cost cap on one side and v1.2.2
-flat linearity at scale on the other. ivf cost ≈ `nprobe × 4096` vectors
-(≈ constant once the index has more than `nprobe` centroids), so the
-crossover N — where ivf meets the flat line — sits near `nprobe × 4096` ≈
-24,576, bracketed by the N=20,000 / 25,000 / 32,000 measurement points.
+flat is a brute scan — provably linear, and the data confirms a near-perfect
+line. Extrapolating it above the measured range is rigorous, not a guess.
+ivf changes regime at the crossover, so it cannot be extrapolated — it must
+be measured, with points bracketing the crossover.
+
+The two grids no longer share points: v1.2.2 is the measured-then-extrapolated
+flat line, v1.4.3 is measured directly. The comparison overlays them on a
+latency-vs-N plot. ivf cost ≈ `nprobe × 4096` vectors (≈ constant once the
+index has more than `nprobe` centroids), so the crossover N — where ivf meets
+the flat line — sits near `nprobe × 4096` ≈ 24,576, bracketed by the
+N=20,000 / 25,000 / 32,000 measurement points.
 
 > The two SDKs run on different machines (the SDK versions cannot coexist).
 > The dominant N-dependent phase (`score`) is cluster-side, so client-machine
@@ -72,45 +74,19 @@ crossover N — where ivf meets the flat line — sits near `nprobe × 4096` ≈
 
 ## Phase 3 — v1.2.2 sweep   `[machine: pyenvector 1.2.2]`
 
-**Status: planned** — re-launching from
-`benchmark/envector-latency-comparison-1.2.2`. The earlier 2026-05-16 launch
-aborted at N=4096 (ES2 keyserver `connection refused`); the [0..8192]-only
-grid and combined-scenario methodology have since been superseded by the
-Phase 4 update. This re-launch matches Phase 4 — same grid, same
-per-scenario-group split, same `--runs 15 --warmup 3`, same multi_capture /
-duplicate exclusions — so v1.2.2 and v1.4.3 measure at identical N points.
-
-Same per-group split as Phase 4 — three separate invocations, all on the
-same grid:
+**Status: running** (launched 2026-05-16, ~16 h).
 
 ```
-GRID=100,1000,10000,20000,25000,32000,50000,100000
-for grp in recall capture searchable; do
-  .venv/bin/python benchmark/runners/latency_bench.py --direct-envector \
-      --primer-rows $GRID --sweep-scenarios $grp --runs 15 --warmup 3 \
-      --report  benchmark/reports/latency_sweep_v122_rmpflat_${grp}_<date>.md \
-      --raw-csv benchmark/reports/raw/latency_sweep_v122_rmpflat_${grp}_<date>.csv
-done
+python benchmark/runners/latency_bench.py \
+    --direct-envector \
+    --primer-rows 0,256,1024,2048,4096,8192 \
+    --runs 11 --warmup 3 \
+    --report benchmark/reports/latency_sweep_v122_rmpflat_2026-05-16.md \
+    --raw-csv benchmark/reports/raw/latency_sweep_v122_rmpflat_2026-05-16.csv
 ```
 
-Strictly sequential. Same `remaining_insertable_vectors` ceiling + within-N
-drift reasoning as Phase 4 Step 3 — mutating groups (`capture`,
-`searchable`) ERROR-out past the ceiling at higher N; those rows are
-recorded and mark where the ceiling sits.
-
-**Cost — v1.2.2 is much slower per-N than v1.4.3, so this is a multi-day
-run, not overnight.**
-
-  * **score is O(N), ~11 ms/record.** At N=100,000 one recall call ≈ 18 min;
-    12 runs/N ≈ 3.7 h just for recall measurement. Total recall sweep across
-    the grid ≈ 9 h. `capture` carries the same score cost per scenario, × 3
-    scenarios → ~27 h.
-  * **insert is single-row (~125 ms/row).** Each N primes from scratch, so
-    cumulative priming across the grid ≈ 9 h per group.
-  * **Total Phase 3 ≈ 4–5 days** end-to-end for the three groups. Stage them
-    across days; do not run concurrently against the same cluster.
-  * The 2026-05-16 ES2 `connection refused` was transient; if it recurs,
-    abort and retry — do not silently skip N points.
+8 effective runs/N. flat is a line, so few runs/N suffice — the 6-point line
+fit averages the noise.
 
 ## Phase 4 — v1.4.3 sweep + comparison   `[machine: pyenvector 1.4.3]`
 
@@ -233,11 +209,11 @@ four separate sweeps, expect a long, ideally overnight, run.
 
 ### Step 4 — comparison report
 
-Merge the two raw CSVs. Per scenario, overlay v1.2.2-flat (measured) and
-v1.4.3-ivf (measured) latency-vs-N curves on the shared grid. Report the
-crossover N (bracketed by the 20k / 25k / 32k points), the winner in each
-region, and the speed-up factor. State which config each SDK measured and
-the two-machine caveat in the environment section. (`searchable` is
+Merge the two raw CSVs. Per scenario, overlay v1.2.2-flat (measured 0–8192 +
+linear extrapolation above) and v1.4.3-ivf (measured) latency-vs-N curves.
+Report the crossover N (bracketed by the 20k/25k/32k points), the winner in
+each region, and the speed-up factor. State which config each SDK measured
+and the two-machine caveat in the environment section. (`searchable` is
 measured by different mechanisms per SDK — see v143.py — so compare only
 total insert→searchable time there.)
 

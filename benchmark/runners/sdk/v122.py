@@ -26,6 +26,8 @@ class V122Adapter(SdkAdapter):
     sdk_version = "1.2.2"
     eval_mode = "rmp"
     index_type = "flat"
+    # FLAT is brute-force — no inverted lists, so no nlist / nprobe needed.
+    index_params = {"index_type": "flat"}
 
     # Top-1 cosine at/above which a just-inserted vector counts as searchable.
     _SEARCHABLE_SCORE_THRESHOLD = 0.999
@@ -80,9 +82,12 @@ class V122Adapter(SdkAdapter):
         metadata: list,
         *,
         row_insert: bool = False,
+        await_completion: bool = False,
+        load: bool = False,
     ) -> None:
-        # row_insert is a 1.4.x-only knob (single-row insert API). v1.2.2 has
-        # no such path, so it is accepted for interface parity and ignored.
+        # row_insert / await_completion / load are 1.4.x-only knobs (single-row
+        # insert API; async-merge wait + index load). v1.2.2 has no such paths,
+        # so they are accepted for interface parity and ignored.
         meta_strs = [
             json.dumps(m) if isinstance(m, dict) else str(m) for m in metadata
         ]
@@ -104,7 +109,7 @@ class V122Adapter(SdkAdapter):
 
         Single phase (`insert_searchable`): v1.2.2 insert is non-blocking and
         the SDK exposes no lifecycle state, so we cannot decompose it the way
-        the 1.4.x lifecycle (insert_rpc / load / wait) allows.
+        the 1.4.x lifecycle (insert_rpc / merge_wait / publish_wait) allows.
         """
         t0 = time.perf_counter()
         # No row_insert here: this is V122Adapter calling its own insert(),

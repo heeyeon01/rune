@@ -22,10 +22,10 @@ insert_mode:
 searchable measurement differs by SDK and is NOT directly comparable
 per-phase — only the total insert→searchable time is:
   - 1.2.2 — client-side score polling (top-1 cosine ≥ 0.999); single phase.
-  - 1.4.3 — server lifecycle, 3 phases (insert_rpc / load / wait).
+  - 1.4.3 — server lifecycle, 3 phases (insert_rpc / merge_wait / publish_wait).
 
 `--direct-envector` mode:
-  - Provisions a dedicated `runecontext_bench` index instead of touching the
+  - Provisions a dedicated `runebench` index instead of touching the
     live `runecontext` index.
   - Drops + recreates the bench index between scenarios so each scenario's
     latency numbers start from a known empty state.
@@ -92,6 +92,16 @@ from runners.common import (  # noqa: E402
 )
 from runners.sdk import SearchableCtx, get_sdk_adapter  # noqa: E402
 
+
+# ── debug logging ──────────────────────────────────────────────────────────────
+# Timestamped stderr lines for the envector cluster crash investigation (see
+# _reset_bench_index). Mirrors runners.sdk.base._dbg; kept on stderr so debug
+# output never lands in the stdout-captured benchmark report.
+
+def _dbg(tag: str, msg: str) -> None:
+    print(f"[dbg {time.strftime('%H:%M:%S')}] {tag}: {msg}", file=sys.stderr, flush=True)
+
+
 # ── constants ─────────────────────────────────────────────────────────────────
 
 # eval_mode / index_type are no longer module constants — they are properties
@@ -103,12 +113,27 @@ from runners.sdk import SearchableCtx, get_sdk_adapter  # noqa: E402
 # dict here.
 BENCH_DIM = 1024
 
+# Priming batch size — rows submitted in a single adapter.prime_insert() call.
+# Confirmed stable on 1.4.3 at 4096 rows × multiple sequential batches with
+# `await_completion=True, load=True`. The final batch in a priming run carries
+# whatever remainder is left (n_records % PRIMER_BATCH_ROWS).
+PRIMER_BATCH_ROWS = 4096
+
 # Sweep scenario groups — the tokens accepted by --sweep-scenarios. Each maps
-# to one or more T-scenarios in LatencyBenchmark._run_sweep_group(). T9
+# to one or more T-scenarios in LatencyBenchmark._iter_sweep_group(). T9
 # (vault_status) and the T7 topk-scaling scan are deliberately excluded:
 # neither varies with the primed index size N, so sweeping them would only
 # burn measurement time.
 SWEEP_GROUPS = ("recall", "searchable", "capture", "multi", "duplicate")
+
+# Groups whose scenarios share one primed index per N (no per-scenario
+# reset+prime). Only read-only groups belong here: every scenario in a
+# shared-prime group must leave the index byte-for-byte identical, so the
+# next scenario sees the same N primed records. Mutating scenarios
+# (capture/searchable/multi/duplicate) cannot share — they would carry over
+# inserted rows / shard layout changes / consumed slots into the next
+# scenario, contaminating its measurement.
+SHARED_PRIME_GROUPS = frozenset({"recall"})
 
 # ── sample inputs ─────────────────────────────────────────────────────────────
 
@@ -259,13 +284,15 @@ class LatencyBenchmark:
         warmup: int = 2,
         insert_mode: str = "single",
         direct_envector: bool = False,
-        bench_index_name: str = "runecontext_bench",
+        bench_index_name: str = "runebench",
+        sweep_mode: bool = False,
     ) -> None:
         self.runs = runs
         self.warmup = warmup
         self.insert_mode = insert_mode
         self.direct_envector = direct_envector
         self.bench_index_name = bench_index_name
+        self.sweep_mode = sweep_mode
         self._config: Any = None
         self._index_name: Optional[str] = None
         self._key_id: Optional[str] = None
@@ -473,7 +500,14 @@ class LatencyBenchmark:
         )
 
         # Clean start: drop any leftover bench index from prior runs.
-        self._reset_bench_index()
+        #
+        # Sweep mode skips this on purpose. run_sweep creates a fresh
+        # `{bench_index}_N{N}` index per grid point, so the bare bench index is
+        # never measured. And the cluster kills the *second* create_index in a
+        # process — spending the process's first create here would make the
+        # first sweep point's create fail. Each per-N create must be the first.
+        if not self.sweep_mode:
+            self._reset_bench_index()
 
         print("OK")
         print(f"    sdk        : pyenvector {self._adapter.sdk_version}")
@@ -509,13 +543,26 @@ class LatencyBenchmark:
         # _with_reconnect, so no outer reconnect wrapper is needed here.
         # create_index uses the adapter's index_type (flat for 1.2.2,
         # ivf_vct for 1.4.3).
-        if self._index_name in self._adapter.list_index_names():
+        #
+        # Log the full index listing first: if the cluster is dying because
+        # fire-and-forget drops (run_sweep / teardown) leave stale indexes
+        # piling up, the count here is the evidence.
+        existing = self._adapter.list_index_names()
+        _dbg(
+            "reset",
+            f"index={self._index_name!r} sweep_mode={self.sweep_mode} — "
+            f"cluster currently holds {len(existing)} index(es): {existing}",
+        )
+        if self._index_name in existing:
+            _dbg("reset", f"dropping pre-existing {self._index_name!r}")
             self._adapter.drop_index(self._index_name)
 
         deadline = time.monotonic() + 180.0
         saw_being_deleted = False
         last_err: Optional[Exception] = None
+        attempt = 0
         while time.monotonic() < deadline:
+            attempt += 1
             try:
                 self._adapter.create_index(self._index_name, BENCH_DIM)
                 return
@@ -524,8 +571,18 @@ class LatencyBenchmark:
                 msg = str(e).lower()
                 if "being deleted" in msg or "notready" in msg:
                     saw_being_deleted = True
+                    _dbg(
+                        "reset",
+                        f"create attempt {attempt} for {self._index_name!r} hit "
+                        f"a retryable error, sleeping 2s — {type(e).__name__}: {e}",
+                    )
                     time.sleep(2.0)
                     continue
+                _dbg(
+                    "reset",
+                    f"create attempt {attempt} for {self._index_name!r} hit a "
+                    f"NON-retryable error, raising — {type(e).__name__}: {e}",
+                )
                 raise
 
         if saw_being_deleted:
@@ -615,32 +672,47 @@ class LatencyBenchmark:
         """Insert deterministic random records so recall has data to score.
 
         RNG seed 0xBEEF matches the v1.4.3 reference exactly, so the priming
-        vectors are deterministic across SDK versions. The adapter's insert()
-        handles metadata JSON-encoding and app-layer encryption; we call
-        `_wait_for_score_ready` once at the end so the recall scenario starts
-        on a queryable state.
+        vectors are deterministic across SDK versions. Submission goes
+        through `adapter.prime_insert` — a batch path with
+        `await_completion=True, load=True` on 1.4.3, which keeps the cluster
+        stable across many sequential batches. Rows are chunked at
+        `PRIMER_BATCH_ROWS`; the last batch carries the remainder
+        (`n_records % PRIMER_BATCH_ROWS`). The priming path is independent
+        of `self.insert_mode`: single-insert scenarios still get a batch-
+        primed index, only the measured insert is single-row.
         """
         if not self.direct_envector:
             return
 
         rng = np.random.default_rng(0xBEEF)
 
+        n_batches = (n_records + PRIMER_BATCH_ROWS - 1) // PRIMER_BATCH_ROWS
         print(
-            f"  priming {self._index_name} with {n_records} records...",
+            f"  priming {self._index_name} with {n_records} records "
+            f"({n_batches} batch(es) of up to {PRIMER_BATCH_ROWS})...",
             end=" ", flush=True,
         )
         start = time.monotonic()
         last_vec: Optional[list] = None
-        for i in range(n_records):
-            vec = rng.standard_normal(BENCH_DIM).astype(np.float32).tolist()
-            last_vec = vec
-            meta = self._build_insert_metadata(
-                f"priming record {i}", f"prime-{i}", "priming"
-            )
-            self._adapter.insert(self._index_name, [vec], [meta])
+        for batch_start in range(0, n_records, PRIMER_BATCH_ROWS):
+            batch_end = min(batch_start + PRIMER_BATCH_ROWS, n_records)
+            vectors = [
+                rng.standard_normal(BENCH_DIM).astype(np.float32).tolist()
+                for _ in range(batch_end - batch_start)
+            ]
+            metadata = [
+                self._build_insert_metadata(
+                    f"priming record {i}", f"prime-{i}", "priming"
+                )
+                for i in range(batch_start, batch_end)
+            ]
+            last_vec = vectors[-1]
+            self._adapter.prime_insert(self._index_name, vectors, metadata)
 
         # Make sure the recall scenario's first score() doesn't trip on a
-        # half-stable index.
+        # half-stable index. prime_insert already awaits the cluster on
+        # 1.4.3, but this poll is cheap when the index is already searchable
+        # and remains the only signal for 1.2.2.
         if last_vec is not None:
             self._wait_for_score_ready(last_vec)
 
@@ -909,45 +981,57 @@ class LatencyBenchmark:
             metadata={**meta, "topk": topk, "runs": self.runs - self.warmup},
         )
 
-    async def run_recall_topk_scaling(self) -> list[LatencyScenarioResult]:
-        """T7: measure recall latency at varying topk values."""
-        results = []
+    async def run_recall_topk_one(self, topk: int) -> LatencyScenarioResult:
+        """T7 (single variant): measure recall latency at one topk value.
+
+        Recall is read-only, so callers typically share one primed index
+        across all topk variants — see run_recall_topk_scaling() for the
+        iteration. This helper exists for callers that need per-variant
+        wrapping (e.g. resetting cluster-side state or measuring a single
+        variant in isolation).
+        """
+        sid = f"T7_topk_{topk}"
         query = "architecture decisions"
+        runs = max(self.warmup + 3, min(self.runs, self.warmup + 5))
 
-        for topk in RECALL_TOPK_VARIANTS:
-            sid = f"T7_topk_{topk}"
-            print(f"  [{sid}] ", end="", flush=True)
-            all_timings: list[dict[str, float]] = []
-            runs = max(self.warmup + 3, min(self.runs, self.warmup + 5))
+        print(f"  [{sid}] ", end="", flush=True)
+        all_timings: list[dict[str, float]] = []
 
-            for i in range(runs):
-                label = self._warmup_label(i)
-                print(f"{label} ", end="", flush=True)
-                try:
-                    t = await self._single_recall_phases(query, topk)
-                    all_timings.append(t)
-                except Exception as e:
-                    print(f"\n    ERROR: {e}")
-                    results.append(LatencyScenarioResult(
-                        scenario_id=sid, feature="recall",
-                        metadata={"topk": topk, "label": f"topk scaling topk={topk}"},
-                        error=str(e),
-                    ))
-                    break
-            else:
-                print("done")
-                phases = self._build_phase_list(
-                    ["embed", "score", "vault_topk", "remind", "total"],
-                    all_timings,
+        for i in range(runs):
+            label = self._warmup_label(i)
+            print(f"{label} ", end="", flush=True)
+            try:
+                t = await self._single_recall_phases(query, topk)
+                all_timings.append(t)
+            except Exception as e:
+                print(f"\n    ERROR: {e}")
+                return LatencyScenarioResult(
+                    scenario_id=sid, feature="recall",
+                    metadata={"topk": topk, "label": f"topk scaling topk={topk}"},
+                    error=str(e),
                 )
-                results.append(LatencyScenarioResult(
-                    scenario_id=sid,
-                    feature="recall",
-                    phases=phases,
-                    metadata={"topk": topk, "label": f"topk scaling topk={topk}",
-                              "runs": runs - self.warmup},
-                ))
-        return results
+
+        print("done")
+        phases = self._build_phase_list(
+            ["embed", "score", "vault_topk", "remind", "total"],
+            all_timings,
+        )
+        return LatencyScenarioResult(
+            scenario_id=sid,
+            feature="recall",
+            phases=phases,
+            metadata={"topk": topk, "label": f"topk scaling topk={topk}",
+                      "runs": runs - self.warmup},
+        )
+
+    async def run_recall_topk_scaling(self) -> list[LatencyScenarioResult]:
+        """T7: measure recall latency at every topk in RECALL_TOPK_VARIANTS.
+
+        All variants run against the currently-primed index. Recall is
+        read-only so the data state seen by each variant is identical;
+        re-priming between variants would only repeat work.
+        """
+        return [await self.run_recall_topk_one(topk) for topk in RECALL_TOPK_VARIANTS]
 
     async def _searchable_capture_phases(
         self, text: str, title: str, domain: str
@@ -958,7 +1042,7 @@ class LatencyBenchmark:
         insert->searchable segment is delegated to the adapter, whose phase
         breakdown differs by SDK version:
           - 1.2.2 -> 1 phase  (client score polling)
-          - 1.4.3 -> 3 phases (insert_rpc / load_index / wait_searchable)
+          - 1.4.3 -> 3 phases (insert_rpc / merge_wait / publish_wait)
 
         Phases: embed / score / vault_topk / <adapter searchable phases> / total
         """
@@ -1087,7 +1171,9 @@ class LatencyBenchmark:
           embed_batch  — embed(texts): single gRPC call, N vectors at once
           score        — novelty check on primary record (texts[0])
           vault_topk   — Vault decrypt on primary record's score
-          insert_batch — insert all N vectors in one batch API call
+          insert_batch — insert all N vectors in one batch API call with
+                         await_completion=True + load=True (durable insert:
+                         RPC submit + server merge wait + index load)
           total        — wall clock including all phases
         """
         total_start = time.perf_counter()
@@ -1112,7 +1198,11 @@ class LatencyBenchmark:
             vault_ms = t_vault.elapsed_ms
 
         # [4] Insert all N vectors in one call — multi-phase capture is always
-        # a batch insert (row_insert=False).
+        # a batch insert (row_insert=False). await_completion=True, load=True:
+        # the insert_batch phase waits for the cluster's async merge to retire
+        # and loads the index, so it measures a durable insert rather than
+        # bare RPC submission. Safe here — N is 2-5 rows, far under the 4096
+        # row threshold of BUG_REPORT.md, and runs are sequential.
         metadata = [
             self._build_insert_metadata(t, f"phase-{i + 1}", domain)
             for i, t in enumerate(texts)
@@ -1123,6 +1213,8 @@ class LatencyBenchmark:
                 vecs,
                 metadata,
                 row_insert=False,
+                await_completion=True,
+                load=True,
             )
         insert_ms = t_insert.elapsed_ms
 
@@ -1261,13 +1353,17 @@ class LatencyBenchmark:
 
         if run_recall:
             print("\n[recall]")
+            # Recall is read-only, so the index state recall sees is invariant
+            # across T5/T6/T7 (no inserts, no shard layout change). One
+            # reset+prime up front gives every recall scenario the same N
+            # primed records; re-priming between them would burn time on
+            # identical data. Each scenario still gets its own warmup runs
+            # to absorb cluster-side cache differences.
+            _reset_for("recall_shared")
+            self._prime_bench_index()
             for sc in SCENARIOS_RECALL:
-                _reset_for(sc["id"])
-                self._prime_bench_index()
                 r = await self.run_recall_scenario(sc)
                 report.add(r)
-            _reset_for("T7_topk_scaling")
-            self._prime_bench_index()
             for r in await self.run_recall_topk_scaling():
                 report.add(r)
 
@@ -1294,33 +1390,43 @@ class LatencyBenchmark:
 
     # ── sweep orchestration ────────────────────────────────────────────────────
 
-    async def _run_sweep_group(self, group: str) -> list[LatencyScenarioResult]:
-        """Run one sweep scenario group against the currently-primed index.
+    def _iter_sweep_group(self, group: str):
+        """Yield (sid_tag, scenario_runner) pairs for one sweep scenario group.
 
-        No index reset happens between scenarios here: every scenario in the
-        group (and every group at this N) measures against the index primed
-        once at the top of run_sweep's N loop. Re-priming before each scenario
-        would cost another N inserts per scenario and dominate the run. The
-        price is within-N drift on the *mutating* groups — see run_sweep.
+        Each yielded `scenario_runner` is an awaitable-returning callable
+        that measures exactly one scenario; `sid_tag` is a short, file-safe
+        slug used by the caller to build a bench-index name.
+
+        Index lifecycle is the caller's (run_sweep's) responsibility — see
+        SHARED_PRIME_GROUPS for the split between read-only groups (one
+        primed index shared across all scenarios in the group, per N) and
+        mutating groups (drop+create+prime per scenario).
         """
         if group == "recall":
-            return [await self.run_recall_scenario(sc) for sc in SCENARIOS_RECALL]
+            for sc in SCENARIOS_RECALL:
+                yield sc["id"], (lambda sc=sc: self.run_recall_scenario(sc))
+            return
         if group == "searchable":
-            return [
-                await self.run_searchable_scenario(sc)
-                for sc in SCENARIOS_CAPTURE[:3]
-            ]
+            for sc in SCENARIOS_CAPTURE[:3]:
+                yield (
+                    sc["id"] + "_searchable",
+                    (lambda sc=sc: self.run_searchable_scenario(sc)),
+                )
+            return
         if group == "capture":
-            return [
-                await self.run_capture_scenario(sc) for sc in SCENARIOS_CAPTURE
-            ]
+            for sc in SCENARIOS_CAPTURE:
+                yield sc["id"], (lambda sc=sc: self.run_capture_scenario(sc))
+            return
         if group == "multi":
-            return [
-                await self.run_multi_capture_scenario(sc)
-                for sc in SCENARIOS_MULTI_CAPTURE
-            ]
+            for sc in SCENARIOS_MULTI_CAPTURE:
+                yield (
+                    sc["id"],
+                    (lambda sc=sc: self.run_multi_capture_scenario(sc)),
+                )
+            return
         if group == "duplicate":
-            return [await self.run_capture_duplicate()]
+            yield "T4_duplicate", (lambda: self.run_capture_duplicate())
+            return
         raise ValueError(f"unknown sweep scenario group: {group!r}")
 
     async def run_sweep(
@@ -1331,25 +1437,35 @@ class LatencyBenchmark:
     ) -> LatencyBenchReport:
         """Sweep the index-size axis: measure the selected scenarios at each N.
 
-        For every N in `primer_rows`:
-          1. create a fresh bench index named ``{bench_index}_N{N}`` — a unique
-             name per grid point, so the cluster's async drop never races the
-             next create (the failure mode `_reset_bench_index` warns about);
-          2. prime it with exactly N deterministic records (skipped for N=0);
-          3. measure each selected scenario group against it;
-          4. drop the index fire-and-forget — the next N does not wait on it.
+        Isolation policy (the whole point of this method): every scenario
+        must start from the same known state — exactly N primed records,
+        fresh index, no carry-over from a prior scenario — so the measured
+        latency is attributable to *this* scenario at *this* N, not to the
+        history of what ran before it. The policy splits by group type:
 
-        Re-creating per N (rather than accumulating N -> N+dN) keeps each grid
-        point a function of N alone, not of measurement history — see the plan
-        file's "매 N마다 drop+create" rationale.
+        - **Mutating groups** (groups whose scenarios insert as they
+          measure) get their own per-scenario bench index
+          ``{bench_index}_N{N}_{sid}``: drop+create+prime, run one scenario,
+          drop fire-and-forget. Anything less means a later scenario's
+          measurement reflects an earlier scenario's inserts — and at the
+          extreme the cluster's row-insert slot budget runs out mid-group
+          (see `benchmark/reports/insertable_probe_v143_2026-05-26.md`).
+        - **Read-only groups** (see SHARED_PRIME_GROUPS) leave the index
+          byte-for-byte identical, so all scenarios in the group share one
+          primed index ``{bench_index}_N{N}_{group}``: one drop+create+prime
+          per (N, group), every scenario measured against the same N
+          records. Re-priming between read-only scenarios would just repeat
+          work on identical data — at N=100000 each priming run is
+          ~16 minutes, so the savings matter. Per-scenario warmup runs
+          already absorb cluster-side cache warmth differences.
 
-        Within-N drift: the index is primed ONCE per N. Non-mutating scenarios
-        (recall) therefore see exactly N rows. Mutating scenarios (capture /
-        searchable / multi / duplicate) insert as they measure, so later runs —
-        and later groups — see slightly more than N. The default
-        --sweep-scenarios order front-loads `recall` to keep the clean
-        measurement clean; for drift-free numbers on a mutating group, sweep
-        that group on its own (one --sweep-scenarios token per invocation).
+        Unique index names (with sid or group in the name) keep the
+        cluster's async drop from racing the next create.
+
+        v1.4.3 scope is currently capture, searchable, recall — `multi` and
+        `duplicate` are still wired in the runner but excluded by the v1.4.3
+        plan; pass them explicitly via --sweep-scenarios only on the SDK
+        version that includes them.
 
         Raw samples stream to `raw_csv_path` as each scenario finishes (long
         format: N, scenario, run_idx, phase, latency_ms), so a long run that
@@ -1381,19 +1497,50 @@ class LatencyBenchmark:
             "sweep_grid_N": ",".join(str(n) for n in primer_rows),
             "sweep_scenarios": ",".join(sweep_scenarios),
             "bench_index_prefix": self.bench_index_name,
-            "reset_policy": "per-N drop+create (unique bench index per grid point)",
+            "reset_policy": (
+                "mutating groups: per-scenario drop+create+prime; "
+                "read-only recall: one drop+create+prime per (N, group), "
+                "all T5/T6/T7 scenarios share that primed index"
+            ),
         }
-
-        if {"capture", "searchable", "multi", "duplicate"}.intersection(sweep_scenarios):
-            print(
-                "  note: capture/searchable/multi/duplicate insert rows while "
-                "measuring — within one N they see a growing index. For "
-                "drift-free per-group numbers, sweep one group per invocation."
-            )
 
         csv_file = None
         csv_writer = None
         n_csv_rows = 0
+
+        def _emit_result(N: int, r: LatencyScenarioResult) -> None:
+            """Stamp sweep_n, add to report, stream samples to raw-CSV."""
+            r.metadata = {**r.metadata, "sweep_n": N}
+            report.add(r)
+            if csv_writer is None or r.error:
+                return
+            nonlocal n_csv_rows
+            for phase in r.phases:
+                for run_idx, sample in enumerate(phase.samples_ms, start=1):
+                    csv_writer.writerow(
+                        [N, r.scenario_id, run_idx, phase.name, round(sample, 4)]
+                    )
+                    n_csv_rows += 1
+            csv_file.flush()
+
+        def _prepare_index(index_name: str, N: int) -> None:
+            self._index_name = index_name
+            print(f"  reset[{index_name}]...", end=" ", flush=True)
+            self._reset_bench_index()
+            self._ensure_index_loaded()
+            print("done")
+            if N > 0:
+                self._prime_bench_index(n_records=N)
+            else:
+                print("  N=0 — measuring an empty index, no priming")
+
+        def _drop_index_quietly(index_name: str) -> None:
+            try:
+                self._adapter.drop_index(index_name)
+                print(f"  drop({index_name!r}) queued")
+            except Exception as e:  # noqa: BLE001
+                print(f"  drop({index_name!r}) failed (non-fatal): {e}")
+
         try:
             if raw_csv_path:
                 csv_path = Path(raw_csv_path)
@@ -1405,67 +1552,93 @@ class LatencyBenchmark:
                 )
 
             for grid_i, N in enumerate(primer_rows, start=1):
-                index_name = f"{self.bench_index_name}_N{N}"
-                self._index_name = index_name
                 print("\n" + "=" * 64)
-                print(
-                    f"  sweep {grid_i}/{len(primer_rows)} — N={N}  "
-                    f"index={index_name}"
-                )
+                print(f"  sweep {grid_i}/{len(primer_rows)} — N={N}")
                 print("=" * 64)
-                try:
-                    print(f"  reset[{index_name}]...", end=" ", flush=True)
-                    self._reset_bench_index()
-                    self._ensure_index_loaded()
-                    print("done")
 
-                    if N > 0:
-                        self._prime_bench_index(n_records=N)
-                    else:
-                        print("  N=0 — measuring an empty index, no priming")
+                for group in sweep_scenarios:
+                    print(f"\n  [N={N}] [{group}]")
+                    scenarios = list(self._iter_sweep_group(group))
 
-                    for group in sweep_scenarios:
-                        print(f"\n  [N={N}] [{group}]")
-                        for r in await self._run_sweep_group(group):
-                            r.metadata = {**r.metadata, "sweep_n": N}
-                            report.add(r)
-                            if csv_writer is not None and not r.error:
-                                for phase in r.phases:
-                                    for run_idx, sample in enumerate(
-                                        phase.samples_ms, start=1
-                                    ):
-                                        csv_writer.writerow(
-                                            [
-                                                N,
-                                                r.scenario_id,
-                                                run_idx,
-                                                phase.name,
-                                                round(sample, 4),
-                                            ]
-                                        )
-                                        n_csv_rows += 1
-                                csv_file.flush()
-                except Exception as e:  # noqa: BLE001
-                    # One bad grid point must not abort a multi-hour sweep.
-                    print(
-                        f"\n  [N={N}] ABORTED: {e} — continuing to next grid point"
-                    )
-                finally:
-                    # Fire-and-forget: queue the drop, do not poll the async
-                    # delete. The unique per-N name means a leftover index can
-                    # never collide with a future create.
-                    try:
-                        self._adapter.drop_index(index_name)
-                        print(f"  drop({index_name!r}) queued")
-                    except Exception as e:  # noqa: BLE001
-                        print(f"  drop({index_name!r}) failed (non-fatal): {e}")
+                    if group in SHARED_PRIME_GROUPS:
+                        # Read-only group — one primed index, every scenario
+                        # measured against the same N records.
+                        index_name = f"{self.bench_index_name}_N{N}_{group}"
+                        try:
+                            _prepare_index(index_name, N)
+                        except Exception as e:  # noqa: BLE001
+                            print(
+                                f"\n  [N={N}][{group}] prime ABORTED: {e} — "
+                                f"skipping all {len(scenarios)} scenario(s) "
+                                f"in this group"
+                            )
+                            for sid_tag, _ in scenarios:
+                                _emit_result(
+                                    N,
+                                    LatencyScenarioResult(
+                                        scenario_id=sid_tag,
+                                        feature=group,
+                                        metadata={},
+                                        error=str(e),
+                                    ),
+                                )
+                            _drop_index_quietly(index_name)
+                            continue
+
+                        try:
+                            for sid_tag, runner in scenarios:
+                                try:
+                                    _emit_result(N, await runner())
+                                except Exception as e:  # noqa: BLE001
+                                    print(
+                                        f"\n  [N={N}][{sid_tag}] ABORTED: "
+                                        f"{e} — continuing to next scenario"
+                                    )
+                                    _emit_result(
+                                        N,
+                                        LatencyScenarioResult(
+                                            scenario_id=sid_tag,
+                                            feature=group,
+                                            metadata={},
+                                            error=str(e),
+                                        ),
+                                    )
+                        finally:
+                            _drop_index_quietly(index_name)
+                        continue
+
+                    # Mutating group — per-scenario reset+prime so a
+                    # preceding scenario's inserts don't contaminate the
+                    # next one's measurement (or exhaust the cluster's
+                    # row-insert slot budget — see insertable_probe report).
+                    for sid_tag, runner in scenarios:
+                        index_name = f"{self.bench_index_name}_N{N}_{sid_tag}"
+                        try:
+                            _prepare_index(index_name, N)
+                            _emit_result(N, await runner())
+                        except Exception as e:  # noqa: BLE001
+                            print(
+                                f"\n  [N={N}][{sid_tag}] ABORTED: {e} — "
+                                f"continuing to next scenario"
+                            )
+                            _emit_result(
+                                N,
+                                LatencyScenarioResult(
+                                    scenario_id=sid_tag,
+                                    feature=group,
+                                    metadata={},
+                                    error=str(e),
+                                ),
+                            )
+                        finally:
+                            _drop_index_quietly(index_name)
         finally:
             if csv_file is not None:
                 csv_file.close()
                 print(f"\nRaw CSV → {raw_csv_path}  ({n_csv_rows} rows)")
 
-        # Every per-N index was dropped above; clear the handle so teardown()
-        # does not try to drop an already-gone index.
+        # Every per-(N, scenario) index was dropped above; clear the handle
+        # so teardown() does not try to drop an already-gone index.
         self._index_name = None
         return report
 
@@ -1572,6 +1745,7 @@ async def _main(args: argparse.Namespace) -> None:
         insert_mode=args.insert_mode,
         direct_envector=args.direct_envector,
         bench_index_name=args.bench_index,
+        sweep_mode=bool(args.primer_rows),
     )
 
     mode_label = "bench-index" if args.direct_envector else "vault-mediated"
@@ -1681,7 +1855,7 @@ def main() -> None:
         action="store_true",
         help=(
             "Benchmark index mode: provision a dedicated FLAT bench index "
-            "(default `runecontext_bench`), drop+recreate it between scenarios "
+            "(default `runebench`), drop+recreate it between scenarios "
             "for clean latency numbers, and prime it with 20 records before "
             "each recall scenario. Vault is still used for keys and FHE score "
             "decryption (the SecKey only lives on Vault). Does NOT touch the "
@@ -1690,8 +1864,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--bench-index",
-        default="runecontext_bench",
-        help="Bench index name (--direct-envector only, default: runecontext_bench)",
+        default="runebench",
+        help="Bench index name (--direct-envector only, default: runebench)",
     )
     parser.add_argument(
         "--primer-rows",
