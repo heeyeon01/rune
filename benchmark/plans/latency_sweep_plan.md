@@ -100,20 +100,23 @@ per-scenario isolation reasoning as Phase 4 Step 3 — mutating groups
 (and T10/T11/T12) start from a matching fresh N-row index; recall (T5/T6)
 reuses one primed index (non-mutating, no isolation gain from reset).
 
-**Cost — v1.2.2 is much slower per-N than v1.4.3, so this is a multi-day
-run, not overnight.**
+**Cost — score (O(N)) is the dominant cost; priming is small. v1.2.2 is
+much slower per-N than v1.4.3, so this is still a multi-day run, not
+overnight.**
 
   * **score is O(N), ~11 ms/record.** At N=100,000 one recall call ≈ 18 min;
     12 runs/N ≈ 3.7 h. Total recall sweep across the grid ≈ 9 h. `capture`
     carries the same score cost per scenario, × 3 scenarios → ~27 h.
     `searchable` likewise ~27 h.
-  * **insert is single-row (~125 ms/row).** One prime cycle through the
-    grid ≈ 9 h. Recall keeps the single-prime model (~9 h); mutating groups
-    reset+prime per scenario — `capture` and `searchable` each pay 3 prime
-    cycles → ~27 h priming per group.
-  * **Total Phase 3 ≈ 6–7 days** end-to-end for the three groups (score +
-    priming). Stage them across days; do not run concurrently against the
-    same cluster.
+  * **prime is batch (`PRIMER_BATCH_ROWS=4096`, latency_bench.py:120).**
+    Smoke observed N=10,000 prime ≈ 23 s (3 batches × ~8 s); extrapolating,
+    N=100,000 prime ≈ ~3 min and one prime cycle across the full grid ≈
+    ~7 min. Recall does one cycle per group; mutating groups (`capture`,
+    `searchable`) do three cycles per group (per-scenario isolation) →
+    ~21 min priming each. Priming is negligible against the score budget.
+  * **Total Phase 3 ≈ 2–3 days** end-to-end for the three groups, almost
+    entirely score time. Stage them across days; do not run concurrently
+    against the same cluster.
   * The 2026-05-16 ES2 `connection refused` was transient; if it recurs,
     abort and retry — do not silently skip N points.
 
