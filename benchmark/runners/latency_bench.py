@@ -1408,8 +1408,13 @@ class LatencyBenchmark:
             return
         if group == "searchable":
             for sc in SCENARIOS_CAPTURE[:3]:
+                # Match run_searchable_scenario's T+9 renumbering so the
+                # sweep loop's sid_tag, the result's scenario_id, and the
+                # short index suffix all read as T10/T11/T12.
+                _parts = sc["id"].split("_", 1)
+                sid_tag = f"T{int(_parts[0][1:]) + 9}_{_parts[1]}_searchable"
                 yield (
-                    sc["id"] + "_searchable",
+                    sid_tag,
                     (lambda sc=sc: self.run_searchable_scenario(sc)),
                 )
             return
@@ -1612,7 +1617,12 @@ class LatencyBenchmark:
                     # next one's measurement (or exhaust the cluster's
                     # row-insert slot budget — see insertable_probe report).
                     for sid_tag, runner in scenarios:
-                        index_name = f"{self.bench_index_name}_N{N}_{sid_tag}"
+                        # v1.2.2 cluster's Indexes.name column is VARCHAR(30);
+                        # full sid_tag (e.g. T1_short_en_searchable) overflows.
+                        # The leading T-token alone (T1/T13/etc.) is unique
+                        # within a single --sweep-scenarios invocation.
+                        sid_short = sid_tag.split("_", 1)[0]
+                        index_name = f"{self.bench_index_name}_N{N}_{sid_short}"
                         try:
                             _prepare_index(index_name, N)
                             _emit_result(N, await runner())
