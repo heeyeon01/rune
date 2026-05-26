@@ -120,6 +120,31 @@ Total end-to-end (MERGED_SAVED 시점까지)
 - **보고 지표**: p50, p95, p99, mean (ms 단위)
 - **타이머**: `time.perf_counter()`
 - **단계별 측정**: embed / score / vault_topk / insert(또는 remind) / total 개별 계측
+- **시나리오 격리**: 모든 시나리오는 같은 시작 조건(정확히 N개 primed records,
+  fresh index, 선행 시나리오의 잔류 상태 없음)에서 측정한다.
+  - **사유**: 격리된 환경에서 측정해야 신뢰할 수 있는 latency 데이터가 나온다.
+    선행 시나리오가 인덱스 상태(row 수, raw/merged shard 비율, 클러스터 캐시,
+    배경 merge worker 상태 등)를 흔든 채로 다음 시나리오를 측정하면 그 수치가
+    "N 사이즈의 인덱스에서 X 시나리오의 latency"인지 "T1을 N+δ회 돌린 다음
+    T2 latency"인지 구분이 안 된다.
+  - **정책 — mutating vs read-only**:
+    - **mutating 시나리오** (capture T1/T2/T3, searchable T10/T11/T12): 측정 중
+      insert가 일어나 인덱스 상태를 바꾸므로 시나리오마다 drop+create+prime 다시.
+      공유 인덱스에서는 (a) 후행 시나리오 수치가 선행 시나리오의 누적 insert를
+      반영해 측정값이 오염되고, (b) row-insert 슬롯 소진으로 후행이 실패하는
+      사례까지 관찰됨 (2026-05-25 capture sweep, 메커니즘
+      `benchmark/reports/insertable_probe_v143_2026-05-26.md`).
+    - **read-only 시나리오** (recall T5/T6 — sweep mode / single-grid 공통,
+      그리고 single-grid 전용 T7 topk 변형): 측정이 인덱스 상태를 바꾸지 않으므로
+      동일 N의 primed 인덱스를 공유. 시나리오마다 재-prime하면 같은 데이터를
+      다시 까는 셈이며, 특히 N=100000에서는 priming 한 번이 ~16분이라 시간 손실이 큼.
+      시나리오별 warmup run이 클러스터 캐시 워밍 차이는 흡수.
+  - **구현**:
+    - sweep mode: mutating은 `{bench_index}_N{N}_{sid}` per-scenario 유니크 인덱스,
+      read-only(recall T5/T6)는 `{bench_index}_N{N}_recall` 그룹 공유 인덱스.
+      T7은 sweep 측정 대상이 아님(N과 무관).
+    - single-grid mode: mutating 시나리오는 각각 reset+prime,
+      recall 블록(T5/T6/T7 topk 4종)은 한 번 reset+prime 후 공유.
 
 ---
 
