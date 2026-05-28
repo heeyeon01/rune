@@ -1374,8 +1374,12 @@ class LatencyBenchmark:
 
         if run_searchable:
             print("\n[searchable]")
-            for sc in SCENARIOS_CAPTURE[:3]:  # T1, T2, T3 — short/long/Korean
-                _reset_for(sc["id"] + "_searchable")
+            for sc in SCENARIOS_CAPTURE[:3]:  # remapped to T10/T11/T12 inside
+                _parts = sc["id"].split("_", 1)
+                searchable_sid = (
+                    f"T{int(_parts[0][1:]) + 9}_{_parts[1]}_searchable"
+                )
+                _reset_for(searchable_sid)
                 r = await self.run_searchable_scenario(sc)
                 report.add(r)
 
@@ -1408,8 +1412,15 @@ class LatencyBenchmark:
             return
         if group == "searchable":
             for sc in SCENARIOS_CAPTURE[:3]:
+                # Match run_searchable_scenario's remap: T1/T2/T3 → T10/T11/T12
+                # so sweep-level error rows and per-scenario index names use the
+                # same scenario ID as successful result rows.
+                _parts = sc["id"].split("_", 1)
+                searchable_sid = (
+                    f"T{int(_parts[0][1:]) + 9}_{_parts[1]}_searchable"
+                )
                 yield (
-                    sc["id"] + "_searchable",
+                    searchable_sid,
                     (lambda sc=sc: self.run_searchable_scenario(sc)),
                 )
             return
@@ -1612,7 +1623,11 @@ class LatencyBenchmark:
                     # next one's measurement (or exhaust the cluster's
                     # row-insert slot budget — see insertable_probe report).
                     for sid_tag, runner in scenarios:
-                        index_name = f"{self.bench_index_name}_N{N}_{sid_tag}"
+                        # Keep index name short — derived names like
+                        # `idx_<index>_ctxt_map_item_id_inc_store_path` must
+                        # fit in the cluster's 63-char identifier limit.
+                        short_sid = sid_tag.split("_", 1)[0]
+                        index_name = f"{self.bench_index_name}_N{N}_{short_sid}"
                         try:
                             _prepare_index(index_name, N)
                             _emit_result(N, await runner())
