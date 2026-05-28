@@ -58,4 +58,5 @@ docs/planning/
 
 # Benchmark scratch — raw run outputs and bug-repro scripts
 benchmark/reports/raw/
+benchmark/reports/past/
 benchmark/repro/
