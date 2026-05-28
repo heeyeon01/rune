@@ -1,0 +1,168 @@
+
+Setting up … (mode=bench-index, insert_mode=single) — SDK version auto-detected; eval_mode/index_type printed below
+  Connecting to Vault (for benchmark index mode)... OK
+    sdk        : pyenvector 1.4.3
+    index      : runebench  (bench-only, separate from runecontext)
+    key_id     : vault-key  (shared with production - read-only here)
+    endpoint   : runebench-052701-czpcmtt1q9f3.clusters.envector.ai
+    eval_mode  : mm32
+    index_type : ivf_vct
+    insert_mode: single
+    reset      : per-scenario drop+create
+
+Sweep — grid N = [100, 1000, 10000, 20000, 25000, 32000, 50000, 100000], scenarios = ['searchable'], runs = 12 effective, warmup = 3
+
+================================================================
+  sweep 1/8 — N=100
+================================================================
+
+  [N=100] [searchable]
+  reset[runebench_N100_T10]... done
+  priming runebench_N100_T10 with 100 records (1 batch(es) of up to 4096)... done in 41.1s
+  [T10_short_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N100_T10') queued
+  reset[runebench_N100_T11]... done
+  priming runebench_N100_T11 with 100 records (1 batch(es) of up to 4096)... done in 37.3s
+  [T11_long_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N100_T11') queued
+  reset[runebench_N100_T12]... done
+  priming runebench_N100_T12 with 100 records (1 batch(es) of up to 4096)... done in 37.1s
+  [T12_korean_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N100_T12') queued
+
+================================================================
+  sweep 2/8 — N=1000
+================================================================
+
+  [N=1000] [searchable]
+  reset[runebench_N1000_T10]... done
+  priming runebench_N1000_T10 with 1000 records (1 batch(es) of up to 4096)... done in 43.1s
+  [T10_short_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N1000_T10') queued
+  reset[runebench_N1000_T11]... done
+  priming runebench_N1000_T11 with 1000 records (1 batch(es) of up to 4096)... done in 43.4s
+  [T11_long_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N1000_T11') queued
+  reset[runebench_N1000_T12]... done
+  priming runebench_N1000_T12 with 1000 records (1 batch(es) of up to 4096)... done in 43.5s
+  [T12_korean_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N1000_T12') queued
+
+================================================================
+  sweep 3/8 — N=10000
+================================================================
+
+  [N=10000] [searchable]
+  reset[runebench_N10000_T10]... done
+  priming runebench_N10000_T10 with 10000 records (3 batch(es) of up to 4096)... done in 340.8s
+  [T10_short_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N10000_T10') queued
+  reset[runebench_N10000_T11]... done
+  priming runebench_N10000_T11 with 10000 records (3 batch(es) of up to 4096)... done in 327.8s
+  [T11_long_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N10000_T11') queued
+  reset[runebench_N10000_T12]... done
+  priming runebench_N10000_T12 with 10000 records (3 batch(es) of up to 4096)... done in 327.7s
+  [T12_korean_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N10000_T12') queued
+
+================================================================
+  sweep 4/8 — N=20000
+================================================================
+
+  [N=20000] [searchable]
+  reset[runebench_N20000_T10]... done
+  priming runebench_N20000_T10 with 20000 records (5 batch(es) of up to 4096)... done in 609.8s
+  [T10_short_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N20000_T10') queued
+  reset[runebench_N20000_T11]... done
+  priming runebench_N20000_T11 with 20000 records (5 batch(es) of up to 4096)... done in 669.1s
+  [T11_long_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N20000_T11') queued
+  reset[runebench_N20000_T12]... done
+  priming runebench_N20000_T12 with 20000 records (5 batch(es) of up to 4096)... done in 661.7s
+  [T12_korean_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N20000_T12') queued
+
+================================================================
+  sweep 5/8 — N=25000
+================================================================
+
+  [N=25000] [searchable]
+  reset[runebench_N25000_T10]... done
+  priming runebench_N25000_T10 with 25000 records (7 batch(es) of up to 4096)... done in 960.6s
+  [T10_short_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N25000_T10') queued
+  reset[runebench_N25000_T11]... done
+  priming runebench_N25000_T11 with 25000 records (7 batch(es) of up to 4096)... done in 948.6s
+  [T11_long_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N25000_T11') queued
+  reset[runebench_N25000_T12]... done
+  priming runebench_N25000_T12 with 25000 records (7 batch(es) of up to 4096)... done in 917.5s
+  [T12_korean_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N25000_T12') queued
+
+================================================================
+  sweep 6/8 — N=32000
+================================================================
+
+  [N=32000] [searchable]
+  reset[runebench_N32000_T10]... done
+  priming runebench_N32000_T10 with 32000 records (8 batch(es) of up to 4096)... done in 1167.3s
+  [T10_short_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N32000_T10') queued
+  reset[runebench_N32000_T11]... done
+  priming runebench_N32000_T11 with 32000 records (8 batch(es) of up to 4096)... done in 1088.0s
+  [T11_long_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N32000_T11') queued
+  reset[runebench_N32000_T12]... done
+  priming runebench_N32000_T12 with 32000 records (8 batch(es) of up to 4096)... done in 1142.4s
+  [T12_korean_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N32000_T12') queued
+
+================================================================
+  sweep 7/8 — N=50000
+================================================================
+
+  [N=50000] [searchable]
+  reset[runebench_N50000_T10]... done
+  priming runebench_N50000_T10 with 50000 records (13 batch(es) of up to 4096)... done in 2196.5s
+  [T10_short_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N50000_T10') queued
+  reset[runebench_N50000_T11]... done
+  priming runebench_N50000_T11 with 50000 records (13 batch(es) of up to 4096)... done in 2098.4s
+  [T11_long_en_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N50000_T11') queued
+  reset[runebench_N50000_T12]... done
+  priming runebench_N50000_T12 with 50000 records (13 batch(es) of up to 4096)... done in 2119.1s
+  [T12_korean_searchable] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N50000_T12') queued
+
+================================================================
+  sweep 8/8 — N=100000
+================================================================
+
+  [N=100000] [searchable]
+  reset[runebench_N100000_T10]... done
+  priming runebench_N100000_T10 with 100000 records (25 batch(es) of up to 4096)... 
+  [N=100000][T10_short_en_searchable] ABORTED: prime_insert failed: EnvectorTransportError('get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: b3dd2aad67195fdf2ca5') — continuing to next scenario
+  drop('runebench_N100000_T10') failed (non-fatal): delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: e228a4736468a9687cdd
+  reset[runebench_N100000_T11]... 
+  [N=100000][T11_long_en_searchable] ABORTED: get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: e61eeb684482f0dec27a — continuing to next scenario
+  drop('runebench_N100000_T11') failed (non-fatal): delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 9f34e58ef6bf22d70807
+  reset[runebench_N100000_T12]... 
+  [N=100000][T12_korean_searchable] ABORTED: get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: ec8319d00aa1a4825426 — continuing to next scenario
+  drop('runebench_N100000_T12') failed (non-fatal): delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: fe77f3d41768ba128fe0
+
+Raw CSV → benchmark/reports/raw/latency_sweep_v143_mm32ivf_searchable_2026-05-28.csv  (1764 rows)
+
+================================================================
+  rune latency SWEEP — pyenvector 1.4.3 (mm32/ivf_vct)
+  grid N = 100,1000,10000,20000,25000,32000,50000,100000
+================================================================
+  T10_short_en_searchable      total p50  100:18531  1000:18646  10000:18833  20000:18980  25000:19323  32000:19250  50000:19406  100000:ERR
+  T11_long_en_searchable       total p50  100:18448  1000:18403  10000:18496  20000:19092  25000:19421  32000:19106  50000:19189  100000:ERR
+  T12_korean_searchable        total p50  100:18722  1000:18594  10000:18931  20000:18938  25000:19189  32000:19436  50000:19383  100000:ERR
+================================================================
+
+Report saved → benchmark/reports/latency_sweep_v143_mm32ivf_searchable_2026-05-28.md

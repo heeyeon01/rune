@@ -1,0 +1,146 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/310 [00:00<?, ?it/s]Loading weights: 100%|██████████| 310/310 [00:00<00:00, 8542.60it/s]
+[dbg 00:49:47] reset: index='runebench_N100_T10' sweep_mode=True — cluster currently holds 1 index(es): ['runecontext']
+[dbg 00:49:47] create_index: #1 START index='runebench_N100_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 00:49:50] create_index: #1 OK after 2928ms index='runebench_N100_T10'
+[dbg 00:55:19] drop_index: START index='runebench_N100_T10'
+[dbg 00:55:19] drop_index: OK after 22ms index='runebench_N100_T10'
+[dbg 00:55:19] reset: index='runebench_N100_T11' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N100_T10']
+[dbg 00:55:19] create_index: #2 START index='runebench_N100_T11' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 00:55:22] create_index: #2 OK after 2748ms index='runebench_N100_T11'
+[dbg 01:00:38] drop_index: START index='runebench_N100_T11'
+[dbg 01:00:38] drop_index: OK after 21ms index='runebench_N100_T11'
+[dbg 01:00:38] reset: index='runebench_N100_T12' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N100_T11']
+[dbg 01:00:38] create_index: #3 START index='runebench_N100_T12' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 01:00:40] create_index: #3 OK after 2737ms index='runebench_N100_T12'
+[dbg 01:06:01] drop_index: START index='runebench_N100_T12'
+[dbg 01:06:01] drop_index: OK after 21ms index='runebench_N100_T12'
+[dbg 01:06:01] reset: index='runebench_N1000_T10' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N100_T12']
+[dbg 01:06:01] create_index: #4 START index='runebench_N1000_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 01:06:04] create_index: #4 OK after 2865ms index='runebench_N1000_T10'
+[dbg 01:11:32] drop_index: START index='runebench_N1000_T10'
+[dbg 01:11:32] drop_index: OK after 20ms index='runebench_N1000_T10'
+[dbg 01:11:32] reset: index='runebench_N1000_T11' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N1000_T10']
+[dbg 01:11:32] create_index: #5 START index='runebench_N1000_T11' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 01:11:34] create_index: #5 OK after 2665ms index='runebench_N1000_T11'
+[dbg 01:16:59] drop_index: START index='runebench_N1000_T11'
+[dbg 01:16:59] drop_index: OK after 22ms index='runebench_N1000_T11'
+[dbg 01:16:59] reset: index='runebench_N1000_T12' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N1000_T11']
+[dbg 01:16:59] create_index: #6 START index='runebench_N1000_T12' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 01:17:01] create_index: #6 OK after 2636ms index='runebench_N1000_T12'
+[dbg 01:22:27] drop_index: START index='runebench_N1000_T12'
+[dbg 01:22:27] drop_index: OK after 22ms index='runebench_N1000_T12'
+[dbg 01:22:27] reset: index='runebench_N10000_T10' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N1000_T12']
+[dbg 01:22:27] create_index: #7 START index='runebench_N10000_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 01:22:30] create_index: #7 OK after 2767ms index='runebench_N10000_T10'
+[dbg 01:33:13] drop_index: START index='runebench_N10000_T10'
+[dbg 01:33:13] drop_index: OK after 28ms index='runebench_N10000_T10'
+[dbg 01:33:13] reset: index='runebench_N10000_T11' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N10000_T10']
+[dbg 01:33:13] create_index: #8 START index='runebench_N10000_T11' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 01:33:16] create_index: #8 OK after 2764ms index='runebench_N10000_T11'
+[dbg 01:43:40] drop_index: START index='runebench_N10000_T11'
+[dbg 01:43:40] drop_index: OK after 25ms index='runebench_N10000_T11'
+[dbg 01:43:40] reset: index='runebench_N10000_T12' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N10000_T11']
+[dbg 01:43:40] create_index: #9 START index='runebench_N10000_T12' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 01:43:43] create_index: #9 OK after 2674ms index='runebench_N10000_T12'
+[dbg 01:54:15] drop_index: START index='runebench_N10000_T12'
+[dbg 01:54:15] drop_index: OK after 29ms index='runebench_N10000_T12'
+[dbg 01:54:15] reset: index='runebench_N20000_T10' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N10000_T12']
+[dbg 01:54:15] create_index: #10 START index='runebench_N20000_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 01:54:18] create_index: #10 OK after 2796ms index='runebench_N20000_T10'
+[dbg 02:10:23] drop_index: START index='runebench_N20000_T10'
+[dbg 02:10:23] drop_index: OK after 29ms index='runebench_N20000_T10'
+[dbg 02:10:23] reset: index='runebench_N20000_T11' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N20000_T10']
+[dbg 02:10:23] create_index: #11 START index='runebench_N20000_T11' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 02:10:26] create_index: #11 OK after 2460ms index='runebench_N20000_T11'
+[dbg 02:27:28] drop_index: START index='runebench_N20000_T11'
+[dbg 02:27:28] drop_index: OK after 43ms index='runebench_N20000_T11'
+[dbg 02:27:28] reset: index='runebench_N20000_T12' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N20000_T11']
+[dbg 02:27:28] create_index: #12 START index='runebench_N20000_T12' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 02:27:31] create_index: #12 OK after 2715ms index='runebench_N20000_T12'
+[dbg 02:44:27] drop_index: START index='runebench_N20000_T12'
+[dbg 02:44:27] drop_index: OK after 28ms index='runebench_N20000_T12'
+[dbg 02:44:27] reset: index='runebench_N25000_T10' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N20000_T12']
+[dbg 02:44:27] create_index: #13 START index='runebench_N25000_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 02:44:30] create_index: #13 OK after 2795ms index='runebench_N25000_T10'
+[dbg 03:05:23] drop_index: START index='runebench_N25000_T10'
+[dbg 03:05:23] drop_index: OK after 33ms index='runebench_N25000_T10'
+[dbg 03:05:23] reset: index='runebench_N25000_T11' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N25000_T10']
+[dbg 03:05:23] create_index: #14 START index='runebench_N25000_T11' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 03:05:26] create_index: #14 OK after 2815ms index='runebench_N25000_T11'
+[dbg 03:26:09] drop_index: START index='runebench_N25000_T11'
+[dbg 03:26:09] drop_index: OK after 28ms index='runebench_N25000_T11'
+[dbg 03:26:09] reset: index='runebench_N25000_T12' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N25000_T11']
+[dbg 03:26:09] create_index: #15 START index='runebench_N25000_T12' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 03:26:12] create_index: #15 OK after 2670ms index='runebench_N25000_T12'
+[dbg 03:46:52] drop_index: START index='runebench_N25000_T12'
+[dbg 03:46:52] drop_index: OK after 27ms index='runebench_N25000_T12'
+[dbg 03:46:52] reset: index='runebench_N32000_T10' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N25000_T12']
+[dbg 03:46:52] create_index: #16 START index='runebench_N32000_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 03:46:54] create_index: #16 OK after 2520ms index='runebench_N32000_T10'
+[dbg 04:12:36] drop_index: START index='runebench_N32000_T10'
+[dbg 04:12:36] drop_index: OK after 29ms index='runebench_N32000_T10'
+[dbg 04:12:36] reset: index='runebench_N32000_T11' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N32000_T10']
+[dbg 04:12:36] create_index: #17 START index='runebench_N32000_T11' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 04:12:38] create_index: #17 OK after 2596ms index='runebench_N32000_T11'
+[dbg 04:36:28] drop_index: START index='runebench_N32000_T11'
+[dbg 04:36:28] drop_index: OK after 44ms index='runebench_N32000_T11'
+[dbg 04:36:28] reset: index='runebench_N32000_T12' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N32000_T11']
+[dbg 04:36:28] create_index: #18 START index='runebench_N32000_T12' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 04:36:31] create_index: #18 OK after 2753ms index='runebench_N32000_T12'
+[dbg 05:02:18] drop_index: START index='runebench_N32000_T12'
+[dbg 05:02:18] drop_index: OK after 32ms index='runebench_N32000_T12'
+[dbg 05:02:18] reset: index='runebench_N50000_T10' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N32000_T12']
+[dbg 05:02:18] create_index: #19 START index='runebench_N50000_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 05:02:20] create_index: #19 OK after 2727ms index='runebench_N50000_T10'
+[dbg 05:43:58] drop_index: START index='runebench_N50000_T10'
+[dbg 05:43:58] drop_index: OK after 95ms index='runebench_N50000_T10'
+[dbg 05:43:58] reset: index='runebench_N50000_T11' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N50000_T10']
+[dbg 05:43:58] create_index: #20 START index='runebench_N50000_T11' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 05:44:01] create_index: #20 OK after 2664ms index='runebench_N50000_T11'
+[dbg 06:24:00] drop_index: START index='runebench_N50000_T11'
+[dbg 06:24:00] drop_index: OK after 43ms index='runebench_N50000_T11'
+[dbg 06:24:00] reset: index='runebench_N50000_T12' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N50000_T11']
+[dbg 06:24:00] create_index: #21 START index='runebench_N50000_T12' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 06:24:02] create_index: #21 OK after 2687ms index='runebench_N50000_T12'
+[dbg 07:04:29] drop_index: START index='runebench_N50000_T12'
+[dbg 07:04:29] drop_index: OK after 40ms index='runebench_N50000_T12'
+[dbg 07:04:29] reset: index='runebench_N100000_T10' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N50000_T12']
+[dbg 07:04:29] create_index: #22 START index='runebench_N100000_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
+[dbg 07:04:31] create_index: #22 OK after 2639ms index='runebench_N100000_T10'
+gRPC transport error
+enVector operation failed (RuntimeError: Batch 0 insert failed: async split batch data failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 3370aa9231931cdff320). Attempting reconnect...
+enVector connection lost - reconnecting to runebench-052701-czpcmtt1q9f3.clusters.envector.ai ...
+gRPC transport error
+gRPC transport error
+[dbg 07:07:46] drop_index: START index='runebench_N100000_T10'
+gRPC transport error
+enVector operation failed (EnvectorTransportError: delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 23194fac16a899fc9d16). Attempting reconnect...
+enVector connection lost - reconnecting to runebench-052701-czpcmtt1q9f3.clusters.envector.ai ...
+gRPC transport error
+gRPC transport error
+[dbg 07:07:46] drop_index: FAILED after 167ms index='runebench_N100000_T10' EnvectorTransportError: delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: e228a4736468a9687cdd
+gRPC transport error
+enVector operation failed (EnvectorTransportError: get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: c0ff408ce15b2aa8dab0). Attempting reconnect...
+enVector connection lost - reconnecting to runebench-052701-czpcmtt1q9f3.clusters.envector.ai ...
+gRPC transport error
+gRPC transport error
+[dbg 07:07:46] drop_index: START index='runebench_N100000_T11'
+gRPC transport error
+enVector operation failed (EnvectorTransportError: delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 7b8a89b3a99107abe915). Attempting reconnect...
+enVector connection lost - reconnecting to runebench-052701-czpcmtt1q9f3.clusters.envector.ai ...
+gRPC transport error
+gRPC transport error
+[dbg 07:07:47] drop_index: FAILED after 209ms index='runebench_N100000_T11' EnvectorTransportError: delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 9f34e58ef6bf22d70807
+gRPC transport error
+enVector operation failed (EnvectorTransportError: get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 8451e6efcdf3186f05ba). Attempting reconnect...
+enVector connection lost - reconnecting to runebench-052701-czpcmtt1q9f3.clusters.envector.ai ...
+gRPC transport error
+gRPC transport error
+[dbg 07:07:47] drop_index: START index='runebench_N100000_T12'
+gRPC transport error
+enVector operation failed (EnvectorTransportError: delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 9ec7fd19f28fac0d46a1). Attempting reconnect...
+enVector connection lost - reconnecting to runebench-052701-czpcmtt1q9f3.clusters.envector.ai ...
+gRPC transport error
+gRPC transport error
+[dbg 07:07:47] drop_index: FAILED after 214ms index='runebench_N100000_T12' EnvectorTransportError: delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: fe77f3d41768ba128fe0
