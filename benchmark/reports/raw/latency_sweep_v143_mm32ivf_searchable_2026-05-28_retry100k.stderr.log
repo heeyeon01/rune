@@ -1,15 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/310 [00:00<?, ?it/s]Loading weights: 100%|██████████| 310/310 [00:00<00:00, 8964.97it/s]
-[dbg 07:32:37] reset: index='runebench_N100000_T10' sweep_mode=True — cluster currently holds 1 index(es): ['runecontext']
-[dbg 07:32:37] create_index: #1 START index='runebench_N100000_T10' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
-[dbg 07:32:40] create_index: #1 OK after 2930ms index='runebench_N100000_T10'
-[dbg 08:21:30] drop_index: START index='runebench_N100000_T10'
-[dbg 08:21:30] drop_index: OK after 92ms index='runebench_N100000_T10'
-[dbg 08:21:30] reset: index='runebench_N100000_T11' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N100000_T10']
-[dbg 08:21:30] create_index: #2 START index='runebench_N100000_T11' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
-[dbg 08:21:33] create_index: #2 OK after 2685ms index='runebench_N100000_T11'
-[dbg 09:11:52] drop_index: START index='runebench_N100000_T11'
-[dbg 09:11:52] drop_index: OK after 109ms index='runebench_N100000_T11'
-[dbg 09:11:52] reset: index='runebench_N100000_T12' sweep_mode=True — cluster currently holds 2 index(es): ['runecontext', 'runebench_N100000_T11']
-[dbg 09:11:52] create_index: #3 START index='runebench_N100000_T12' dim=1024 index_params={'index_type': 'IVF_VCT', 'nlist': 8192, 'default_nprobe': 6} sdk=1.4.3
-[dbg 09:11:54] create_index: #3 OK after 2683ms index='runebench_N100000_T12'
