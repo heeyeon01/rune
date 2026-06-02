@@ -1,0 +1,29 @@
+
+Setting up … (mode=bench-index, insert_mode=single) — SDK version auto-detected; eval_mode/index_type printed below
+  Connecting to Vault (for benchmark index mode)... OK
+    sdk        : pyenvector 1.4.3
+    index      : runebench  (bench-only, separate from runecontext)
+    key_id     : vault-key  (shared with production - read-only here)
+    endpoint   : runebench-052701-czpcmtt1q9f3.clusters.envector.ai
+    eval_mode  : mm32
+    index_type : ivf_vct
+    insert_mode: single
+    reset      : per-scenario drop+create
+
+Sweep — grid N = [100000], scenarios = ['searchable'], runs = 12 effective, warmup = 3
+
+================================================================
+  sweep 1/1 — N=100000
+================================================================
+
+  [N=100000] [searchable]
+  reset[runebench_N100000_T10]... done
+  priming runebench_N100000_T10 with 100000 records (25 batch(es) of up to 4096)... 
+  [N=100000][T10_short_en_searchable] ABORTED: prime_insert failed: ValueError('Index is not insertable for 4096 vectors, 0 available') — continuing to next scenario
+  drop('runebench_N100000_T10') queued
+  reset[runebench_N100000_T11]... done
+  priming runebench_N100000_T11 with 100000 records (25 batch(es) of up to 4096)... 
+  [N=100000][T11_long_en_searchable] ABORTED: prime_insert failed: ValueError('Index is not insertable for 4096 vectors, 0 available') — continuing to next scenario
+  drop('runebench_N100000_T11') queued
+  reset[runebench_N100000_T12]... done
+  priming runebench_N100000_T12 with 100000 records (25 batch(es) of up to 4096)... 

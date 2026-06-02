@@ -1,0 +1,175 @@
+
+Setting up … (mode=bench-index, insert_mode=single) — SDK version auto-detected; eval_mode/index_type printed below
+  Connecting to Vault (for benchmark index mode)... OK
+    sdk        : pyenvector 1.4.3
+    index      : runebench  (bench-only, separate from runecontext)
+    key_id     : vault-key  (shared with production - read-only here)
+    endpoint   : runebench-052701-czpcmtt1q9f3.clusters.envector.ai
+    eval_mode  : mm32
+    index_type : ivf_vct
+    insert_mode: single
+    reset      : per-scenario drop+create
+
+Sweep — grid N = [100, 1000, 10000, 20000, 25000, 32000, 50000, 100000], scenarios = ['capture'], runs = 12 effective, warmup = 3
+
+================================================================
+  sweep 1/8 — N=100
+================================================================
+
+  [N=100] [capture]
+  reset[runebench_N100_T1]... done
+  priming runebench_N100_T1 with 100 records (1 batch(es) of up to 4096)... done in 37.2s
+  [T1_short_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N100_T1') queued
+  reset[runebench_N100_T2]... done
+  priming runebench_N100_T2 with 100 records (1 batch(es) of up to 4096)... done in 37.2s
+  [T2_long_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N100_T2') queued
+  reset[runebench_N100_T3]... done
+  priming runebench_N100_T3 with 100 records (1 batch(es) of up to 4096)... done in 38.3s
+  [T3_korean] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N100_T3') queued
+
+================================================================
+  sweep 2/8 — N=1000
+================================================================
+
+  [N=1000] [capture]
+  reset[runebench_N1000_T1]... done
+  priming runebench_N1000_T1 with 1000 records (1 batch(es) of up to 4096)... done in 43.0s
+  [T1_short_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N1000_T1') queued
+  reset[runebench_N1000_T2]... done
+  priming runebench_N1000_T2 with 1000 records (1 batch(es) of up to 4096)... done in 125.2s
+  [T2_long_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N1000_T2') queued
+  reset[runebench_N1000_T3]... done
+  priming runebench_N1000_T3 with 1000 records (1 batch(es) of up to 4096)... done in 144.0s
+  [T3_korean] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N1000_T3') queued
+
+================================================================
+  sweep 3/8 — N=10000
+================================================================
+
+  [N=10000] [capture]
+  reset[runebench_N10000_T1]... done
+  priming runebench_N10000_T1 with 10000 records (3 batch(es) of up to 4096)... done in 355.2s
+  [T1_short_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N10000_T1') queued
+  reset[runebench_N10000_T2]... done
+  priming runebench_N10000_T2 with 10000 records (3 batch(es) of up to 4096)... done in 358.5s
+  [T2_long_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N10000_T2') queued
+  reset[runebench_N10000_T3]... done
+  priming runebench_N10000_T3 with 10000 records (3 batch(es) of up to 4096)... done in 406.1s
+  [T3_korean] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N10000_T3') queued
+
+================================================================
+  sweep 4/8 — N=20000
+================================================================
+
+  [N=20000] [capture]
+  reset[runebench_N20000_T1]... done
+  priming runebench_N20000_T1 with 20000 records (5 batch(es) of up to 4096)... done in 705.1s
+  [T1_short_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 
+    ERROR on run 10: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N20000_T1') queued
+  reset[runebench_N20000_T2]... done
+  priming runebench_N20000_T2 with 20000 records (5 batch(es) of up to 4096)... done in 616.4s
+  [T2_long_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 
+    ERROR on run 10: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N20000_T2') queued
+  reset[runebench_N20000_T3]... done
+  priming runebench_N20000_T3 with 20000 records (5 batch(es) of up to 4096)... done in 621.8s
+  [T3_korean] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 
+    ERROR on run 10: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N20000_T3') queued
+
+================================================================
+  sweep 5/8 — N=25000
+================================================================
+
+  [N=25000] [capture]
+  reset[runebench_N25000_T1]... done
+  priming runebench_N25000_T1 with 25000 records (7 batch(es) of up to 4096)... done in 926.0s
+  [T1_short_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N25000_T1') queued
+  reset[runebench_N25000_T2]... done
+  priming runebench_N25000_T2 with 25000 records (7 batch(es) of up to 4096)... done in 946.5s
+  [T2_long_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 
+    ERROR on run 12: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N25000_T2') queued
+  reset[runebench_N25000_T3]... done
+  priming runebench_N25000_T3 with 25000 records (7 batch(es) of up to 4096)... done in 961.9s
+  [T3_korean] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 
+    ERROR on run 12: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N25000_T3') queued
+
+================================================================
+  sweep 6/8 — N=32000
+================================================================
+
+  [N=32000] [capture]
+  reset[runebench_N32000_T1]... done
+  priming runebench_N32000_T1 with 32000 records (8 batch(es) of up to 4096)... done in 1103.6s
+  [T1_short_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 
+    ERROR on run 10: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N32000_T1') queued
+  reset[runebench_N32000_T2]... done
+  priming runebench_N32000_T2 with 32000 records (8 batch(es) of up to 4096)... done in 1136.8s
+  [T2_long_en] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 
+    ERROR on run 10: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N32000_T2') queued
+  reset[runebench_N32000_T3]... done
+  priming runebench_N32000_T3 with 32000 records (8 batch(es) of up to 4096)... done in 1146.0s
+  [T3_korean] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 
+    ERROR on run 10: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N32000_T3') queued
+
+================================================================
+  sweep 7/8 — N=50000
+================================================================
+
+  [N=50000] [capture]
+  reset[runebench_N50000_T1]... done
+  priming runebench_N50000_T1 with 50000 records (13 batch(es) of up to 4096)... done in 2145.4s
+  [T1_short_en] warmup warmup warmup run 1 run 2 
+    ERROR on run 2: insert failed: ValueError('Index is not insertable for 1 vectors, 0 available')
+  drop('runebench_N50000_T1') queued
+  reset[runebench_N50000_T2]... done
+  priming runebench_N50000_T2 with 50000 records (13 batch(es) of up to 4096)... 
+  [N=50000][T2_long_en] ABORTED: prime_insert failed: EnvectorTransportError('get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 6ea8d5e2160d01f5e10d') — continuing to next scenario
+  drop('runebench_N50000_T2') failed (non-fatal): delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 79f1e99bdb94ebd01e47
+  reset[runebench_N50000_T3]... 
+  [N=50000][T3_korean] ABORTED: get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 2349032306ed782059e1 — continuing to next scenario
+  drop('runebench_N50000_T3') failed (non-fatal): delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 1322ba89d876f3604ef1
+
+================================================================
+  sweep 8/8 — N=100000
+================================================================
+
+  [N=100000] [capture]
+  reset[runebench_N100000_T1]... 
+  [N=100000][T1_short_en] ABORTED: get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 45e1ab0bb1316f21b240 — continuing to next scenario
+  drop('runebench_N100000_T1') failed (non-fatal): delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 098d00f5d5e671769a05
+  reset[runebench_N100000_T2]... 
+  [N=100000][T2_long_en] ABORTED: get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: d066282f11eb36660dcd — continuing to next scenario
+  drop('runebench_N100000_T2') failed (non-fatal): delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: 1390d936bd0dcc0d0e4f
+  reset[runebench_N100000_T3]... 
+  [N=100000][T3_korean] ABORTED: get index list failed: UNAVAILABLE | Action: Check server connectivity | Request ID: c1ee512289de8af99a5f — continuing to next scenario
+  drop('runebench_N100000_T3') failed (non-fatal): delete index failed: UNAVAILABLE | Action: Check server connectivity | Request ID: d6658ccf6e912d10e732
+
+Raw CSV → benchmark/reports/raw/latency_sweep_v143_mm32ivf_capture_2026-05-28.csv  (600 rows)
+
+================================================================
+  rune latency SWEEP — pyenvector 1.4.3 (mm32/ivf_vct)
+  grid N = 100,1000,10000,20000,25000,32000,50000,100000
+================================================================
+  T1_short_en                  total p50  100:2461  1000:2431  10000:2826  20000:ERR  25000:2703  32000:ERR  50000:ERR  100000:ERR
+  T2_long_en                   total p50  100:2655  1000:2458  10000:2658  20000:ERR  25000:ERR  32000:ERR  50000:ERR  100000:ERR
+  T3_korean                    total p50  100:2629  1000:2412  10000:2714  20000:ERR  25000:ERR  32000:ERR  50000:ERR  100000:ERR
+================================================================
+
+Report saved → benchmark/reports/latency_sweep_v143_mm32ivf_capture_2026-05-28.md
