@@ -1,0 +1,112 @@
+
+Setting up … (mode=bench-index, insert_mode=single) — SDK version auto-detected; eval_mode/index_type printed below
+  Connecting to Vault (for benchmark index mode)... OK
+    sdk        : pyenvector 1.4.3
+    index      : runebench  (bench-only, separate from runecontext)
+    key_id     : vault-key  (shared with production - read-only here)
+    endpoint   : runebench-0520-2-scfomauvy6cn.clusters.envector.ai
+    eval_mode  : mm32
+    index_type : ivf_vct
+    insert_mode: single
+    reset      : per-scenario drop+create
+
+Sweep — grid N = [100, 1000, 10000, 20000, 25000, 32000, 50000, 100000], scenarios = ['recall'], runs = 12 effective, warmup = 3
+
+================================================================
+  sweep 1/8 — N=100
+================================================================
+
+  [N=100] [recall]
+  reset[runebench_N100_recall]... done
+  priming runebench_N100_recall with 100 records (1 batch(es) of up to 4096)... done in 37.7s
+  [T5_exact_match] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  [T6_cross_lang] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N100_recall') queued
+
+================================================================
+  sweep 2/8 — N=1000
+================================================================
+
+  [N=1000] [recall]
+  reset[runebench_N1000_recall]... done
+  priming runebench_N1000_recall with 1000 records (1 batch(es) of up to 4096)... done in 42.6s
+  [T5_exact_match] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  [T6_cross_lang] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N1000_recall') queued
+
+================================================================
+  sweep 3/8 — N=10000
+================================================================
+
+  [N=10000] [recall]
+  reset[runebench_N10000_recall]... done
+  priming runebench_N10000_recall with 10000 records (3 batch(es) of up to 4096)... done in 358.6s
+  [T5_exact_match] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  [T6_cross_lang] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N10000_recall') queued
+
+================================================================
+  sweep 4/8 — N=20000
+================================================================
+
+  [N=20000] [recall]
+  reset[runebench_N20000_recall]... done
+  priming runebench_N20000_recall with 20000 records (5 batch(es) of up to 4096)... done in 640.3s
+  [T5_exact_match] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  [T6_cross_lang] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N20000_recall') queued
+
+================================================================
+  sweep 5/8 — N=25000
+================================================================
+
+  [N=25000] [recall]
+  reset[runebench_N25000_recall]... done
+  priming runebench_N25000_recall with 25000 records (7 batch(es) of up to 4096)... done in 935.6s
+  [T5_exact_match] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  [T6_cross_lang] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N25000_recall') queued
+
+================================================================
+  sweep 6/8 — N=32000
+================================================================
+
+  [N=32000] [recall]
+  reset[runebench_N32000_recall]... done
+  priming runebench_N32000_recall with 32000 records (8 batch(es) of up to 4096)... done in 1192.6s
+  [T5_exact_match] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  [T6_cross_lang] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N32000_recall') queued
+
+================================================================
+  sweep 7/8 — N=50000
+================================================================
+
+  [N=50000] [recall]
+  reset[runebench_N50000_recall]... done
+  priming runebench_N50000_recall with 50000 records (13 batch(es) of up to 4096)... done in 2122.3s
+  [T5_exact_match] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  [T6_cross_lang] warmup warmup warmup run 1 run 2 run 3 run 4 run 5 run 6 run 7 run 8 run 9 run 10 run 11 run 12 done
+  drop('runebench_N50000_recall') queued
+
+================================================================
+  sweep 8/8 — N=100000
+================================================================
+
+  [N=100000] [recall]
+  reset[runebench_N100000_recall]... done
+  priming runebench_N100000_recall with 100000 records (25 batch(es) of up to 4096)... 
+  [N=100000][recall] prime ABORTED: prime_insert failed: ValueError('Index is not insertable for 4096 vectors, 0 available') — skipping all 2 scenario(s) in this group
+  drop('runebench_N100000_recall') queued
+
+Raw CSV → benchmark/reports/raw/latency_sweep_v143_mm32ivf_recall_2026-05-26.csv  (840 rows)
+
+================================================================
+  rune latency SWEEP — pyenvector 1.4.3 (mm32/ivf_vct)
+  grid N = 100,1000,10000,20000,25000,32000,50000,100000
+================================================================
+  T5_exact_match               total p50  100:1036  1000:1054  10000:1168  20000:1275  25000:1220  32000:1268  50000:1282  100000:ERR
+  T6_cross_lang                total p50  100:935  1000:913  10000:1253  20000:1201  25000:1117  32000:1258  50000:1117  100000:ERR
+================================================================
+
+Report saved → benchmark/reports/latency_sweep_v143_mm32ivf_recall_2026-05-26.md
